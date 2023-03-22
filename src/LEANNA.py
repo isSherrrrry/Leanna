@@ -1,32 +1,35 @@
 import json
 import pickle
 import os.path
+from enum import Enum
 from json import JSONDecodeError
-
+import random
 from emora_stdm import DialogueFlow
 from emora_stdm import Macro, Ngrams
-from typing import Dict, Any, List, Callable
+from typing import Dict, Any, List, Callable, Pattern
 import time
 import re
 import openai
+import regexutils
+from regexutils import generate
+
 
 PATH_API_KEY = 'resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
 
-
 def visits() -> DialogueFlow:
     transition_visit = {
         'state': 'start',
-        '`Hi, I\'m Leanna, your personal start-up consultant. At #TIME , I had the pleasure to meet '
-        ' With time as our guide, our encounter was meant to be. May I know the name of future business tycoon?`': {
-            '#GET_NAME': {
-                '``'
+        '`Hi, I\'m Leanna, your personal start-up consultant. At` #TIME `, I had the pleasure to meet '
+        ' \n With time as our guide, our encounter was meant to be. May I know the name of future business tycoon?`': {
+            '#SET_CALL_NAMES': {
+                '`Nice to meet you, `#GET_CALL_NAME `. Can you tell `': 'end'
             }
         }
     }
 
     macros = {
-        'GET_Call_NAME': MacroNLG(),
+        'GET_CALL_NAME': MacroNLG(get_call_name),
         'SET_CALL_NAMES': MacroGPTJSON(
             'How does the speaker want to be called?',
             {V.call_names.name: ["Mike", "Michael"]}),
@@ -37,6 +40,12 @@ def visits() -> DialogueFlow:
     df.load_transitions(transition_visit)
     df.add_macros(macros)
     return df
+
+
+class V(Enum):
+    call_names = 0,  # str
+    office_location = 1  # str
+    office_hours = 2  # dict -> {"Monday": {"begin": "14:00", "end": "15:00"}}
 
 
 def gpt_completion(input: str, regex: Pattern = None) -> str:
@@ -90,6 +99,11 @@ class MacroNLG(Macro):
         return self.generate(vars)
 
 
+def get_call_name(vars: Dict[str, Any]):
+    ls = vars[V.call_names.name]
+    return ls[random.randrange(len(ls))]
+
+
 class MacroTime(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
         current_time = time.strftime("%H:%M")
@@ -117,7 +131,7 @@ if __name__ == '__main__':
 
     check_file = os.path.isfile(path)
     if check_file:
-        load(df, '../../resources/visits.pkl')
+        load(df, 'resources/visits.pkl')
     else:
         df.run()
-        save(df, '../../resources/visits.pkl')
+        save(df, 'resources/visits.pkl')
