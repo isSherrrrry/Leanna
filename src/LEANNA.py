@@ -11,11 +11,10 @@ import time
 import re
 import openai
 import regexutils
-from regexutils import generate
-
 
 PATH_API_KEY = 'resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
+
 
 def visits() -> DialogueFlow:
     transition_visit = {
@@ -23,7 +22,16 @@ def visits() -> DialogueFlow:
         '`Hi, I\'m Leanna, your personal start-up consultant. At` #TIME `, I had the pleasure to meet '
         ' \n With time as our guide, our encounter was meant to be. May I know the name of future business tycoon?`': {
             '#SET_CALL_NAMES': {
-                '`Nice to meet you, `#GET_CALL_NAME `. Can you tell `': 'end'
+                '`Nice to meet you, `$call_names `. Before we dive into business, '
+                'I want to know how you are doing. Do you mind sharing to me your most exciting day in this week?`': {
+                    '#SET_SENTIMENT': {
+                        '#IF($sentiment=positive) `The user\'s sentiment is positive`': 'end',
+                        '`The user input is unknow`': {
+                            'state': 'end',
+                            'score': 0.1
+                        }
+                    }
+                }
             }
         }
     }
@@ -32,8 +40,12 @@ def visits() -> DialogueFlow:
         'GET_CALL_NAME': MacroNLG(get_call_name),
         'SET_CALL_NAMES': MacroGPTJSON(
             'How does the speaker want to be called?',
-            {V.call_names.name: ["Mike", "Michael"]}),
-        'TIME': MacroTime()
+            {V.call_names.name: ["Mike", "Michael"]}, V.call_names.name),
+        'TIME': MacroTime(),
+        'SET_SENTIMENT': MacroGPTJSON(
+            'Among the three sentiments, negative, positive, and neutral, what is the speaker\'s sentiment?',
+            {V.sentiment.name: ["positive"]}, V.sentiment.name),
+        'GET_SENTIMENT': MacroNLG(get_sentiment)
     }
 
     df = DialogueFlow('start', end_state='end')
@@ -43,9 +55,8 @@ def visits() -> DialogueFlow:
 
 
 class V(Enum):
-    call_names = 0,  # str
-    office_location = 1  # str
-    office_hours = 2  # dict -> {"Monday": {"begin": "14:00", "end": "15:00"}}
+    call_names = 0  # str
+    sentiment = 1
 
 
 def gpt_completion(input: str, regex: Pattern = None) -> str:
@@ -63,13 +74,14 @@ def gpt_completion(input: str, regex: Pattern = None) -> str:
 
 
 class MacroGPTJSON(Macro):
-    def __init__(self, request: str, full_ex: Dict[str, Any], empty_ex: Dict[str, Any] = None,
+    def __init__(self, request: str, full_ex: Dict[str, Any], field: str, empty_ex: Dict[str, Any] = None,
                  set_variables: Callable[[Dict[str, Any], Dict[str, Any]], None] = None):
         self.request = request
         self.full_ex = json.dumps(full_ex)
         self.empty_ex = '' if empty_ex is None else json.dumps(empty_ex)
         self.check = re.compile(regexutils.generate(full_ex))
         self.set_variables = set_variables
+        self.field = field
 
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         examples = f'{self.full_ex} or {self.empty_ex} if unavailable' if self.empty_ex else self.full_ex
@@ -88,6 +100,8 @@ class MacroGPTJSON(Macro):
         else:
             vars.update(d)
 
+        vars[self.field] = vars[self.field][0]
+
         return True
 
 
@@ -101,6 +115,13 @@ class MacroNLG(Macro):
 
 def get_call_name(vars: Dict[str, Any]):
     ls = vars[V.call_names.name]
+    return ls[random.randrange(len(ls))]
+
+
+def get_sentiment(vars: Dict[str, Any]):
+    ls = vars[V.sentiment.name]
+    vars['sentiment'] = ls[random.randrange(len(ls))]
+    print(vars['sentiment'])
     return ls[random.randrange(len(ls))]
 
 
@@ -127,7 +148,7 @@ if __name__ == '__main__':
     # run save() for the first time,
     # run load() for subsequent times
 
-    path = '../../resources/visits.pkl'
+    path = '/resources/visits.pkl'
 
     check_file = os.path.isfile(path)
     if check_file:
