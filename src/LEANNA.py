@@ -1,3 +1,4 @@
+import csv
 import json
 import pickle
 import os.path
@@ -15,6 +16,8 @@ import regexutils
 PATH_API_KEY = 'resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
 
+told_jokes = []
+
 
 def visits() -> DialogueFlow:
     transition_visit = {
@@ -25,7 +28,9 @@ def visits() -> DialogueFlow:
                 '`Nice to meet you, `$call_names `. Before we dive into business, '
                 'I want to know how you are doing. Do you mind sharing to me your most exciting day in this week?`': {
                     '#SET_SENTIMENT': {
-                        '#IF($sentiment=positive) `The user\'s sentiment is positive`': 'end',
+                        '#IF($sentiment=positive) `The user\'s sentiment is` $sentiment': 'end',
+                        '#IF($sentiment=negative) `The user\'s sentiment is` $sentiment': 'personality',
+                        '#IF($sentiment=neutral) `The user\'s sentiment is` $sentiment': 'joke',
                         '`The user input is unknow`': {
                             'state': 'end',
                             'score': 0.1
@@ -36,20 +41,65 @@ def visits() -> DialogueFlow:
         }
     }
 
+    transition_personality = {
+        'state': 'personality',
+        '`I had a great time with some of my other chatbot friends last week, trading stories, macros, '
+        'funny ChatGPT responses... My friends tell me I’m a really good listener! '
+        'How would your friends describe you?`': {
+            '#SET_BIG_FIVE': {
+                '#EMO_ADV': {
+                    '#IF($business=talking about business) ` `': 'end',
+                    '`OK please rest well. I\'m alwasy here when you need me. '
+                    'Come back when you ready to talk about business `': 'end'
+                }
+            },
+            'error': {
+                '`I don\'t understand you`': 'end'
+            }
+        }
+    }
+
+    transition_joke = {
+        'state': 'joke',
+        '`Let\t me tell you something to make your day` #JOKE \n How do you like the joke? Feeling better?': {
+            '#SET_SENTIMENT': {
+                '#IF($sentiment=positive) `The user\'s sentiment is` $sentiment': 'end',
+                '` `': {
+                    'state': 'personality',
+                    'score': 0.1
+                }
+            },
+            'error': {
+                '`I don\'t understand you`': 'end'
+            }
+        }
+
+    }
+
     macros = {
-        'GET_CALL_NAME': MacroNLG(get_call_name),
         'SET_CALL_NAMES': MacroGPTJSON(
             'How does the speaker want to be called?',
-            {V.call_names.name: ["Mike", "Michael"]}, V.call_names.name),
+            {V.call_names.name: ["Mike", "Michael"]}, V.call_names.name, True),
         'TIME': MacroTime(),
         'SET_SENTIMENT': MacroGPTJSON(
             'Among the three sentiments, negative, positive, and neutral, what is the speaker\'s sentiment?',
-            {V.sentiment.name: ["positive"]}, V.sentiment.name),
-        'GET_SENTIMENT': MacroNLG(get_sentiment)
+            {V.sentiment.name: ["positive"]}, V.sentiment.name, True),
+        'JOKE': MacroJokes(),
+        'SET_BIG_FIVE': MacroGPTJSON(
+            'Analyze the speaker\'s response, categorize  speaker\'s personality into one of the following: '
+            'open, conscience, extroversion, introversion, agreeable, and neurotic.',
+            {V.big_five.name: ["open", "conscience", "Introversion"]}, V.big_five.name, False),
+        'EMO_ADV': MacroEmotion(),
+        'BUSINESS': MacroGPTJSON(
+            'analyze the speaker\'s desired action and categorize it into only one of the following: '
+            'talking about business or relax.',
+            {V.business.name: ["Talk business"]}, V.business.name, True)
     }
 
     df = DialogueFlow('start', end_state='end')
     df.load_transitions(transition_visit)
+    df.load_transitions(transition_personality)
+    df.load_transitions(transition_joke)
     df.add_macros(macros)
     return df
 
@@ -57,6 +107,8 @@ def visits() -> DialogueFlow:
 class V(Enum):
     call_names = 0  # str
     sentiment = 1
+    big_five = 2
+    business = 3
 
 
 def gpt_completion(input: str, regex: Pattern = None) -> str:
@@ -74,7 +126,7 @@ def gpt_completion(input: str, regex: Pattern = None) -> str:
 
 
 class MacroGPTJSON(Macro):
-    def __init__(self, request: str, full_ex: Dict[str, Any], field: str, empty_ex: Dict[str, Any] = None,
+    def __init__(self, request: str, full_ex: Dict[str, Any], field: str, direct: bool, empty_ex: Dict[str, Any] = None,
                  set_variables: Callable[[Dict[str, Any], Dict[str, Any]], None] = None):
         self.request = request
         self.full_ex = json.dumps(full_ex)
@@ -82,6 +134,7 @@ class MacroGPTJSON(Macro):
         self.check = re.compile(regexutils.generate(full_ex))
         self.set_variables = set_variables
         self.field = field
+        self.direct = direct
 
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         examples = f'{self.full_ex} or {self.empty_ex} if unavailable' if self.empty_ex else self.full_ex
@@ -100,29 +153,46 @@ class MacroGPTJSON(Macro):
         else:
             vars.update(d)
 
-        vars[self.field] = vars[self.field][0]
+        if self.direct:
+            ls = vars[self.field]
+            vars[self.field] = ls[random.randrange(len(ls))]
 
         return True
 
 
-class MacroNLG(Macro):
-    def __init__(self, generate: Callable[[Dict[str, Any]], str]):
-        self.generate = generate
+# class MacroNLG(Macro):
+#     def __init__(self, generate: Callable[[Dict[str, Any]], str]):
+#         self.generate = generate
+#
+#     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+#         return self.generate(vars)
+#
+#
+# def get_call_name(vars: Dict[str, Any]):
+#     ls = vars[V.call_names.name]
+#     return ls[random.randrange(len(ls))]
 
+class MacroEmotion(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        return self.generate(vars)
+        with open('resources/') as json_file:
+            emo_dict = json.loads(json_file)
+
+        ls = vars['big_five']
+        personality = ls[random.randrange(len(ls))]
+
+        return emo_dict[personality][random.randrange(3)] + 'Also, relax, I know doing a start-up could be hard. ' \
+                'That\'s the reason why I was created to help. Do you feel like to work on your business idea today?' \
+                ' Or you rather relax'
 
 
-def get_call_name(vars: Dict[str, Any]):
-    ls = vars[V.call_names.name]
-    return ls[random.randrange(len(ls))]
-
-
-def get_sentiment(vars: Dict[str, Any]):
-    ls = vars[V.sentiment.name]
-    vars['sentiment'] = ls[random.randrange(len(ls))]
-    print(vars['sentiment'])
-    return ls[random.randrange(len(ls))]
+class MacroJokes(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        data = list(csv.reader(open('resource/')))
+        index = random.randint(1, len(data))
+        while index in told_jokes:
+            index = random.randint(1, len(data))
+        told_jokes.append(index)
+        return data[index]
 
 
 class MacroTime(Macro):
