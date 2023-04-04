@@ -174,11 +174,14 @@ class MacroGPTJSON(Macro):
 
 class MacroEmotion(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        with open('resources/') as json_file:
+        with open('resources/personality.json') as json_file:
             emo_dict = json.loads('resources/personality.json')
 
         ls = vars['big_five']
         personality = ls[random.randrange(len(ls))]
+
+        if personality == 'neurotic':
+            personality = 'agreeable'
 
         return emo_dict[personality][random.randrange(3)] + 'Also, relax, I know doing a start-up could be hard. ' \
                 'That\'s the reason why I was created to help. Do you feel like working on your business idea today?' \
