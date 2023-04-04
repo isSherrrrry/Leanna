@@ -49,7 +49,7 @@ def visits() -> DialogueFlow:
             '#SET_BIG_FIVE': {
                 '#EMO_ADV': {
                     '#IF($business=talking about business) ` `': 'end',
-                    '`OK please rest well. I\'m alwasy here when you need me. '
+                    '`OK please rest well. I\'m always here when you need me. '
                     'Come back when you ready to talk about business `': 'end'
                 }
             },
@@ -175,13 +175,13 @@ class MacroGPTJSON(Macro):
 class MacroEmotion(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         with open('resources/') as json_file:
-            emo_dict = json.loads(json_file)
+            emo_dict = json.loads('resources/personality.json')
 
         ls = vars['big_five']
         personality = ls[random.randrange(len(ls))]
 
         return emo_dict[personality][random.randrange(3)] + 'Also, relax, I know doing a start-up could be hard. ' \
-                'That\'s the reason why I was created to help. Do you feel like to work on your business idea today?' \
+                'That\'s the reason why I was created to help. Do you feel like working on your business idea today?' \
                 ' Or you rather relax'
 
 
