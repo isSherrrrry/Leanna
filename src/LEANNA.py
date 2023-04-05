@@ -25,13 +25,13 @@ def visits() -> DialogueFlow:
         '`Hi, I\'m Leanna, your personal start-up consultant. At` #TIME `, I had the pleasure to meet '
         ' \n With time as our guide, our encounter was meant to be. May I know the name of future business tycoon?`': {
             '#SET_CALL_NAMES': {
-                '`Nice to meet you, `$call_names `. Before we dive into business, '
+                '`Nice to meet you,`$call_names `. Before we dive into business, '
                 'I want to know how you are doing. Do you mind sharing to me your most exciting day in this week?`': {
                     '#SET_SENTIMENT': {
                         '#IF($sentiment=positive) `The user\'s sentiment is` $sentiment': 'end',
                         '#IF($sentiment=negative) `The user\'s sentiment is` $sentiment': 'personality',
                         '#IF($sentiment=neutral) `The user\'s sentiment is` $sentiment': 'joke',
-                        '`The user input is unknow`': {
+                        '`The user input is unknown`': {
                             'state': 'end',
                             'score': 0.1
                         }
@@ -50,7 +50,7 @@ def visits() -> DialogueFlow:
                 '#EMO_ADV': {
                     '#IF($business=talking about business) ` `': 'end',
                     '`OK please rest well. I\'m always here when you need me. '
-                    'Come back when you ready to talk about business `': 'end'
+                    'Come back when you are ready to talk about business `': 'end'
                 }
             },
             'error': {
@@ -61,7 +61,7 @@ def visits() -> DialogueFlow:
 
     transition_joke = {
         'state': 'joke',
-        '`Let\t me tell you something to make your day` #JOKE \n How do you like the joke? Feeling better?': {
+        '`Let me tell you something to make your day.\n` #JOKE `\nHow do you like the joke? Feeling better?`': {
             '#SET_SENTIMENT': {
                 '#IF($sentiment=positive) `The user\'s sentiment is` $sentiment': 'end',
                 '` `': {
@@ -175,7 +175,7 @@ class MacroGPTJSON(Macro):
 class MacroEmotion(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         with open('resources/personality.json') as json_file:
-            emo_dict = json.loads('resources/personality.json')
+            emo_dict = json.loads(json_file)
 
         ls = vars['big_five']
         personality = ls[random.randrange(len(ls))]
@@ -185,17 +185,18 @@ class MacroEmotion(Macro):
 
         return emo_dict[personality][random.randrange(3)] + 'Also, relax, I know doing a start-up could be hard. ' \
                 'That\'s the reason why I was created to help. Do you feel like working on your business idea today?' \
-                ' Or you rather relax'
+                ' Or you rather relax?'
 
 
 class MacroJokes(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
-        data = list(csv.reader(open('resource/')))
+        data = list(csv.reader(open('resources/jokes.csv')))
+        print(len(data))
         index = random.randint(1, len(data))
         while index in told_jokes:
             index = random.randint(1, len(data))
         told_jokes.append(index)
-        return data[index]
+        return data[index][0]
 
 
 class MacroTime(Macro):
