@@ -19,6 +19,7 @@ openai.api_key_path = PATH_API_KEY
 told_jokes = []
 
 
+
 def visits() -> DialogueFlow:
     transition_visit = {
         'state': 'start',
@@ -37,7 +38,11 @@ def visits() -> DialogueFlow:
                         }
                     }
                 }
+            },
+            'error': {
+                '`Sorry`': 'start'
             }
+
         }
     }
 
@@ -175,7 +180,7 @@ class MacroGPTJSON(Macro):
 class MacroEmotion(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         with open('resources/personality.json') as json_file:
-            emo_dict = json.loads(json_file)
+            emo_dict = json.load(json_file)
 
         ls = vars['big_five']
         personality = ls[random.randrange(len(ls))]
