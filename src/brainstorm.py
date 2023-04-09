@@ -1,3 +1,5 @@
+import csv
+
 import pandas as pd
 import json
 import pickle
@@ -88,23 +90,32 @@ class MacroQuestion(Macro):
         vars['CUR_Q'] = question
         return 'Let\'s brainstorm ' + vars['SUB_CAT'] + ' together ' + question
 
-
-class MacroExample(Macro):
+class MacroGetExample(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        df = pd.read_csv("resources/data.csv")
-        examples = df[df['Section'] == vars['large_cat'] and df['Subcategory'] == vars['SUB_CAT']]
-        if example_dict[vars['SUB_CAT']] == 1:
-            example = examples['E1']
-        elif example_dict[vars['SUB_CAT']] == 2:
-            example = examples['E2']
-        elif example_dict[vars['SUB_CAT']] == 3:
-            example = examples['E3']
-        elif example_dict[vars['SUB_CAT']] == 4:
-            example = examples['E4']
-        else:
-            return 'Sorry I don\'t have more examples'
+        small_cat = vars.get('small_cat')
 
-        example_dict[vars['SUB_CAT']] += 1
+        small_cat = small_cat.replace(" ", "")  # Remove spaces from the small_cat string
+        available_examples = []
+
+        with open('../resources/questions.csv', newline='', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row['subsec'] == small_cat:
+                    for col in ['E1', 'E2', 'E3', 'E4']:
+                        available_examples.append(row[col])
+                    break
+
+        used_examples_key = f"USED_EXAMPLES_{small_cat}"
+        used_examples = vars.get(used_examples_key, [])
+
+        remaining_examples = [example for example in available_examples if example not in used_examples]
+
+        if len(remaining_examples) == 0:
+            return "Sorry, I don't have more examples."
+
+        selected_example = remaining_examples[0]  # Select the first remaining example
+        used_examples.append(selected_example)
+        vars[used_examples_key] = used_examples
 
         if len(all_cat) == 22:
             vars['ALL'] = 'true'
@@ -113,10 +124,10 @@ class MacroExample(Macro):
             encourage = all_cat[random.randrange(len(all_cat))]
             return 'Building a start up is a long process. But you have a good business plan on ' \
                 + encourage + 'Here is an ' + vars['SUB_CAT'] + 'example that might help you \n' + \
-                example + 'What do you think about your business plan in this topic now?'
+                selected_example + 'What do you think about your business plan in this topic now?'
         else:
             return 'Here is an ' + vars['SUB_CAT'] + 'example that might help you \n' + \
-                example + 'What do you think about your business plan in this topic now?'
+                selected_example + 'What do you think about your business plan in this topic now?'
 
 
 class V(Enum):
