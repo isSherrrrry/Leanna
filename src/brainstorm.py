@@ -1,4 +1,4 @@
-import csv
+import pandas as pd
 import json
 import pickle
 import os.path
@@ -18,6 +18,12 @@ openai.api_key_path = PATH_API_KEY
 
 all_cat = []
 business_plan = {}
+example_dict = {"customer needs": 1, "customer fears": 1, "customer wants": 1, "product benefit": 1,
+                "product experiences": 1, "value proposition": 1, "before purchase": 1, "during purchase": 1,
+                "after purchase": 1, "intellectual strategy": 1, "value chain strategy": 1, "architectural strategy": 1,
+                "disruption strategy": 1, "trust strengths": 1, "value loyalty": 1, "team skills": 1,
+                "team culture": 1, "operations": 1, "inbound logistics": 1, "outbound logistics": 1,
+                "resource gathering": 1}
 
 transition_record = {
     '#QUESTION': {
@@ -71,15 +77,30 @@ transition_neg = {
 
 class MacroQuestion(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        all_cat.append("this business category")
-        question = "this is quesiton"
+        df = pd.read_csv("resources/data.csv")
+        all_cat.append(vars['SUB_CAT'])
+        question = df[df['Section'] == vars['large_cat'] and df['Subcategory'] == vars['SUB_CAT']]['Question']
         vars['CUR_Q'] = question
-        return 'Let\'s brainstorm ... together.' + question
+        return 'Let\'s brainstorm ' + vars['SUB_CAT'] + ' together ' + question
 
 
 class MacroExample(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        example = 'example'
+        df = pd.read_csv("resources/data.csv")
+        examples = df[df['Section'] == vars['large_cat'] and df['Subcategory'] == vars['SUB_CAT']]
+        if example_dict[vars['SUB_CAT']] == 1:
+            example = examples['E1']
+        elif example_dict[vars['SUB_CAT']] == 2:
+            example = examples['E2']
+        elif example_dict[vars['SUB_CAT']] == 3:
+            example = examples['E3']
+        elif example_dict[vars['SUB_CAT']] == 4:
+            example = examples['E4']
+        else:
+            return 'Sorry I don\'t have more examples'
+
+        example_dict[vars['SUB_CAT']] += 1
+
         if len(all_cat) == 22:
             vars['ALL'] = 'true'
 
