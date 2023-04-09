@@ -1,9 +1,11 @@
+import csv
 import json
 import pickle
 import os.path
 from enum import Enum
 from json import JSONDecodeError
 import re
+from random import random
 
 from emora_stdm import DialogueFlow
 from emora_stdm import Macro, Ngrams
@@ -36,13 +38,13 @@ def visits() -> DialogueFlow:
                 'Is there a particular problem area you would like to brainstorm about first?`' : {
                     'state': 'big_small_cat',
                     '#SET_BIG_SAMLL_CATE': {
-                        '`Cool! Let\'s talk about`#GET_SMALL_CAT`in`#GET_BIG_CAT`category!`': 'record'
+                        '`Cool! Let\'s talk about`#GET_SMALL_CAT`in`#GET_BIG_CAT`category!`': 'business_sub'
                     },
                     'error': {
                         '`Cool! I can start you with product innovation talking about customer needs. '
                         'Does that sound good?`': {
                             '#SET_YES_NO': {
-                                '`Cool! Let\'s start.`': 'end'
+                                '`Cool! Let\'s start.`': 'business_sub'
                             },
                             'error':{
                                 '`Okay, do want to start with something else? '
@@ -79,6 +81,46 @@ def visits() -> DialogueFlow:
         }
     }
 
+    transition_question = {
+        'state': 'business_sub',
+        '`We are going to brainstorm`#GET_SMALL_CAT`under`#GET_BIG_CAT`category. \n'
+        'Let\'s think about this question:\n`#GET_QUESTION` `': {
+            '#SET_USER_KNOW': {
+                'IF($user_know=yes)': {
+                    '`Thanks, we have recorded it to the business plan. What do you want to talk about next?`': 'big_small_cat'
+                },
+                '``': {
+                    'state': 'business_neg',
+                    'score': 0.2
+                }
+            },
+            'error': {
+                '`Alright. Thanks for using Leanna! Please come back when you have more ideas. '
+                'Leanna can always pick up where we have left this time. `': 'end'
+            }
+        }
+    }
+
+    transition_negative = {
+        'state': 'business_neg',
+        '`We are going to brainstorm`#GET_SMALL_CAT`under`#GET_BIG_CAT`category. \n'
+        'Let\'s think about this question:\n`#GET_QUESTION` `': {
+            '#SET_USER_KNOW': {
+                'IF($user_know=yes)': {
+                    '`Thanks, we have recorded it to the business plan. What do you want to talk about next?`': 'big_small_cat'
+                },
+                '``': {
+                    'state': 'business_neg',
+                    'score': 0.2
+                }
+            },
+            'error': {
+                '`Alright. Thanks for using Leanna! Please come back when you have more ideas. '
+                'Leanna can always pick up where we have left this time. `': 'end'
+            }
+        }
+    }
+
     macros = {
         'SET_BUS_NAME': MacroGPTJSON(
             'Please find the person\'s business name and the industry',
@@ -90,7 +132,7 @@ def visits() -> DialogueFlow:
             'and the corresponding small category within each large category: '
             'product innovation (includes customer needs, customer fears, customer wants, '
             'product benefits, product features, product experiences, and value proposition), '
-            'ustomer relationship (includes before purchase, during purchase, after purchase, '
+            'customer relationship (includes before purchase, during purchase, after purchase, '
             'intellectual strategy, value chain strategy, architectural strategy, disruption strategy, '
             'trust strengths, and values loyalty) , and infrastructure management (team skills, team culture, '
             'operations, inbound logistics, outbound logistics, and resource gathering).  '
@@ -105,17 +147,43 @@ def visits() -> DialogueFlow:
             {V.sounds_yesno.name: "yes"},
             set_yesno
         ),
+        'SET_USER_KNOW': MacroGPTJSON(
+            'Does the user answer the question well and adequate? Provide binary answer, yes or no',
+            {V.user_know.name: "yes"},
+            set_know
+        ),
         'GET_BUS_NAME': MacroNLG(get_bus_name),
         'GET_INDU': MacroNLG(get_industry),
         'GET_BIG_CAT': MacroNLG(get_big_cat),
         'GET_SMALL_CAT': MacroNLG(get_small_cat),
+        'GET_QUESTION': MacroGetQuestion()
     }
 
     df = DialogueFlow('business_start', end_state='end')
     df.load_transitions(transition_business)
     df.load_transitions(transition_end)
+    df.load_transitions(transition_question)
+    df.load_transitions(transition_negative)
     df.add_macros(macros)
     return df
+
+class MacroGetQuestion(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        small_cat = vars.get('small_cat')
+        if small_cat is None:
+            return "Please provide a valid subsec."
+
+        small_cat = small_cat.replace(" ", "")  # Remove spaces from the small_cat string
+        question_text = None
+
+        with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row['subsec'] == small_cat:
+                    question_text = row['Question']
+                    break
+        vars['SELECTED_QUESTION'] = question_text
+        return question_text
 
 class V(Enum):
     business_name = 0
@@ -123,6 +191,7 @@ class V(Enum):
     large_cat = 2
     small_cat = 3
     sounds_yesno = 4
+    user_know = 5
 
 def gpt_completion(input: str, regex: Pattern = None) -> str:
     response = openai.ChatCompletion.create(
@@ -209,6 +278,8 @@ def set_cat_name(vars: Dict[str, Any], user: Dict[str, Any]):
 def set_yesno(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[V.sounds_yesno.name] = user[V.sounds_yesno.name]
 
+def set_know(vars: Dict[str, Any], user: Dict[str, Any]):
+    vars[V.user_know.name] = user[V.user_know.name]
 
 def save(df: DialogueFlow, varfile: str):
     d = {k: v for k, v in df.vars().items() if not k.startswith('_')}
