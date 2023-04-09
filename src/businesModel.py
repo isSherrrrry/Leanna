@@ -14,8 +14,6 @@ import openai
 
 from src import regexutils
 
-import brainstorm
-
 PATH_API_KEY = '../resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
 
