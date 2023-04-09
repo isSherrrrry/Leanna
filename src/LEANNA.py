@@ -53,9 +53,12 @@ def visits() -> DialogueFlow:
         'How would your friends describe you?`': {
             '#SET_BIG_FIVE': {
                 '#EMO_ADV': {
-                    '#IF($business=talking about business) ` `': 'end',
-                    '`OK please rest well. I\'m always here when you need me. '
+                    '#BUSINESS #IF($business=true) ` `': 'end',
+                    'error': {
+                        'score': 0.1,
+                        '`OK please rest well. I\'m always here when you need me. '
                     'Come back when you are ready to talk about business `': 'end'
+                    }
                 }
             },
             'error': {
@@ -96,9 +99,10 @@ def visits() -> DialogueFlow:
             {V.big_five.name: ["open", "conscience", "Introversion"]}, V.big_five.name, False),
         'EMO_ADV': MacroEmotion(),
         'BUSINESS': MacroGPTJSON(
-            'analyze the speaker\'s desired action and categorize it into only one of the following: '
-            'talking about business or relax.',
-            {V.business.name: ["Talk business"]}, V.business.name, True)
+            'This is a response to the question of whether the speaker want to relax or talk about business.'
+            'Analyze the speaker\'s desired action and categorize it into true or false: '
+            'true for talking about business or false for relax.',
+            {V.business.name: ["true"]}, V.business.name, True)
     }
 
     df = DialogueFlow('start', end_state='end')
@@ -157,7 +161,7 @@ class MacroGPTJSON(Macro):
             self.set_variables(vars, d)
         else:
             vars.update(d)
-
+        print(vars[self.field])
         if self.direct:
             ls = vars[self.field]
             vars[self.field] = ls[random.randrange(len(ls))]
