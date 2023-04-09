@@ -12,6 +12,7 @@ import re
 import openai
 import regexutils
 import LEANNA
+import businesModel
 
 PATH_API_KEY = 'resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
@@ -26,6 +27,7 @@ example_dict = {"customer needs": 1, "customer fears": 1, "customer wants": 1, "
                 "resource gathering": 1}
 
 transition_record = {
+    'state': 'start',
     '#QUESTION': {
         '#REC_BUS': {
             '#GET_KNOW': {
@@ -52,7 +54,7 @@ transition_record = {
 
 transition_pos = {
     'state': 'pos',
-    '`Thanks, I have recorded it to the business plan. What do you want to talk about next?`': 'next state'
+    '`Thanks, I have recorded it to the business plan. What do you want to talk about next?`': 'big_small_cat'
 }
 
 transition_neg = {
@@ -219,7 +221,13 @@ macros = {
     )
 }
 
-LEANNA.df.load_transitions(transition_record)
-LEANNA.df.load_transitions(transition_neg)
-LEANNA.df.load_transitions(transition_pos)
-LEANNA.df.add_macros(macros)
+
+df = DialogueFlow('start', end_state='end')
+df.load_transitions(transition_record)
+df.load_transitions(transition_neg)
+df.load_transitions(transition_pos)
+df.add_macros(macros)
+
+
+if __name__ == '__main__':
+    df.run()

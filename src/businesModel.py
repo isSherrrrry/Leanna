@@ -12,6 +12,8 @@ import openai
 
 from src import regexutils
 
+import brainstorm
+
 PATH_API_KEY = '../resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
 
@@ -34,7 +36,7 @@ def visits() -> DialogueFlow:
                 'Is there a particular problem area you would like to brainstorm about first?`' : {
                     'state': 'big_small_cat',
                     '#SET_BIG_SAMLL_CATE': {
-                        '`Cool! Let\'s talk about`#GET_SMALL_CAT`in`#GET_BIG_CAT`category!`': 'end'
+                        '`Cool! Let\'s talk about`#GET_SMALL_CAT`in`#GET_BIG_CAT`category!`': 'record'
                     },
                     'error': {
                         '`Cool! I can start you with product innovation talking about customer needs. '
