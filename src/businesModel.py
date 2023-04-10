@@ -65,7 +65,8 @@ def visits() -> DialogueFlow:
 
     transition_end = {
         'state': 'business_end',
-        '`Thank you so much for talking with me. This interaction has been fabulous. '
+        '`Thanks! Have a good one.`': 'end',
+        '#IF($bus_true) `Thank you so much for talking with me. This interaction has been fabulous. '
         'I get to know more about`#GET_BUS_NAME`and it was awesome!'
         'Would you like a summary of what we talked about? `': {
             '#SET_YES_NO': {
@@ -336,7 +337,7 @@ class MacroGetExample(Macro):
             return 'Here is an ' + vars['small_cat'] + 'example that might help you \n' + \
                 selected_example + ' What do you think about your business plan in this topic now?'
 
-class MacroGPTJSON(Macro):
+class MacroGPTJSON_BUS(Macro):
     def __init__(self, request: str, full_ex: Dict[str, Any], field: str, empty_ex: Dict[str, Any] = None,
                  set_variables: Callable[[Dict[str, Any], Dict[str, Any]], None] = None):
         self.request = request
@@ -433,6 +434,8 @@ class MacroGPTJSON_BS(Macro):
             self.set_variables(vars, d)
         else:
             vars.update(d)
+
+        vars['bus_true'] = True
 
         if (d['small_cat'] is None or d['small_cat'] == "N/A") and d['large_cat'] is not None:
             small_cat_answers = vars.get('small_cat_answers', {})
