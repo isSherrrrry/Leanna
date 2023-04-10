@@ -48,11 +48,13 @@ def visits() -> DialogueFlow:
     transition_personality = {
         'state': 'personality',
         '#IF($VISIT=multi) #EMO_ADV': {
-            '#BUSINESS #IF($business=true) ` `': 'business_start',
-            'error': {
-                'score': 0.1,
-                '`OK please rest well. I\'m always here when you need me. '
-                'Come back when you are ready to talk about business `': 'end'
+            '#BUSINESS': {
+                '#IF($business=true) ` `': 'business_start',
+                'error': {
+                    'score': 0.1,
+                    '`OK please rest well. I\'m always here when you need me. '
+                    'Come back when you are ready to talk about business `': 'end'
+                }
             }
         },
         '`I had a great time with some of my other chatbot friends last week, trading stories, macros, '
@@ -61,11 +63,13 @@ def visits() -> DialogueFlow:
             'score': 0.5,
             '#SET_BIG_FIVE': {
                 '#EMO_ADV': {
-                    '#BUSINESS #IF($business=true) ` `': 'business_start',
-                    'error': {
-                        'score': 0.1,
-                        '`OK please rest well. I\'m always here when you need me. '
-                        'Come back when you are ready to talk about business `': 'end'
+                    '#BUSINESS': {
+                        '#IF($business=true) ` `': 'business_start',
+                        'error': {
+                            'score': 0.1,
+                            '`OK please rest well. I\'m always here when you need me. '
+                            'Come back when you are ready to talk about business `': 'end'
+                         }
                     }
                 }
             },
