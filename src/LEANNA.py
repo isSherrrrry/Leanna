@@ -29,6 +29,7 @@ def visits() -> DialogueFlow:
                 '#USER_PROFILE': {
                     '#SET_SENTIMENT': {
                         '#IF($sentiment=positive) ` `': 'business_start',
+                        '#IF($sentiment=neutral) ` `': 'joke',
                         '#IF($sentiment=negative) ` `': 'personality',
                         '` `': {
                             'state': 'business_start',
@@ -46,12 +47,14 @@ def visits() -> DialogueFlow:
 
     transition_personality = {
         'state': 'personality',
-        '#IF($VISIT=multi) #EMO_ADV': {
-            '#BUSINESS #IF($business=true) ` `': 'business_start',
-            'error': {
-                'score': 0.1,
-                '`OK please rest well. I\'m always here when you need me. '
-                'Come back when you are ready to talk about business `': 'end'
+        '#IF($VISIT=multi) ` `': {
+            '# EMO_ADV': {
+                '#BUSINESS #IF($business=true) ` `': 'business_start',
+                'error': {
+                    'score': 0.1,
+                    '`OK please rest well. I\'m always here when you need me. '
+                    'Come back when you are ready to talk about business `': 'end'
+                }
             }
         },
         '`I had a great time with some of my other chatbot friends last week, trading stories, macros, '
@@ -91,15 +94,16 @@ def visits() -> DialogueFlow:
     }
 
     global_transition = {
-        '[quit]': {
+        'quit': {
+            'score': 1.5,
             '`Okay. Have a great day!`': 'end'
         }
     }
 
     macros = {
         'SET_CALL_NAMES': MacroGPTJSON(
-            'How does the speaker want to be called?',
-            {V.call_names.name: ["Mike", "Michael"]}, V.call_names.name, True),
+            'What is speaker\'s name?, respond in lower case',
+            {V.call_names.name: ["mike"]}, V.call_names.name, True),
         'TIME': MacroTime(),
         'USER_PROFILE': MacroUser(),
         'SET_SENTIMENT': MacroGPTJSON(
@@ -109,7 +113,7 @@ def visits() -> DialogueFlow:
         'SET_BIG_FIVE': MacroGPTJSON(
             'Analyze the speaker\'s response, categorize  speaker\'s personality into one of the following: '
             'open, conscience, extroversion, introversion, agreeable, and neurotic.',
-            {V.big_five.name: ["open", "conscience", "Introversion"]}, V.big_five.name, False),
+            {V.big_five.name: ["open", "conscience", "extroversion"]}, V.big_five.name, False),
         'EMO_ADV': MacroEmotion(),
         'BUSINESS': MacroGPTJSON(
             'This is a response to the question of whether the speaker want to relax or talk about business.'
@@ -150,14 +154,15 @@ def gpt_completion(input: str, regex: Pattern = None) -> str:
 
 class MacroUser(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        name = vars['call_names']
+        name = vars['call_names'].lower()
+        print(vars)
         if name not in vars:
-            vars[name] = None
+            vars[name] = {}
             return 'Nice to meet you ' + vars['call_names'] + ' Before we dive into business, ' \
                 'I want to know how you are doing. Do you mind sharing to me your most exciting day in this week?'
         else:
             vars['VISIT'] = 'multi'
-            return 'Hi' + vars['call_names'] + 'nice to see you again. How\'s your weekend?'
+            return 'Hi ' + vars['call_names'] + ', nice to see you again. How\'s your weekend?'
 
 
 
@@ -216,7 +221,7 @@ class MacroEmotion(Macro):
         if 'big_five' not in vars[vars['call_names']]:
             ls = vars['big_five']
             personality = ls[random.randrange(len(ls))]
-            vars[vars['call_names']].update(ls)
+            vars[vars['call_names']]['big_five'] = ls
         else:
             ls = vars[vars['call_names']]['big_five']
             personality = ls[random.randrange(len(ls))]
@@ -253,6 +258,7 @@ def save(df: DialogueFlow, varfile: str):
 
 def load(df: DialogueFlow, varfile: str):
     d = pickle.load(open(varfile, 'rb'))
+    print(d)
     df.vars().update(d)
     df.run()
     save(df, varfile)
@@ -261,9 +267,10 @@ def load(df: DialogueFlow, varfile: str):
 if __name__ == '__main__':
     df = visits()
 
-    path = '/resources/visits.pkl'
+    path = 'resources/visits.pkl'
 
     check_file = os.path.isfile(path)
+    print(check_file)
     if check_file:
         load(df, 'resources/visits.pkl')
     else:
