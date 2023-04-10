@@ -12,12 +12,12 @@ import time
 import re
 import openai
 import regexutils
+import businesModel
 
 PATH_API_KEY = 'resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
 
 told_jokes = []
-
 
 
 def visits() -> DialogueFlow:
@@ -26,14 +26,12 @@ def visits() -> DialogueFlow:
         '`Hi, I\'m Leanna, your personal start-up consultant. At` #TIME `, I had the pleasure to meet '
         ' \n With time as our guide, our encounter was meant to be. May I know the name of future business tycoon?`': {
             '#SET_CALL_NAMES': {
-                '`Nice to meet you,`$call_names `. Before we dive into business, '
-                'I want to know how you are doing. Do you mind sharing to me your most exciting day in this week?`': {
+                '#USER_PROFILE': {
                     '#SET_SENTIMENT': {
-                        '#IF($sentiment=positive) `The user\'s sentiment is` $sentiment': 'end',
-                        '#IF($sentiment=negative) `The user\'s sentiment is` $sentiment': 'personality',
-                        '#IF($sentiment=neutral) `The user\'s sentiment is` $sentiment': 'joke',
-                        '`The user input is unknown`': {
-                            'state': 'end',
+                        '#IF($sentiment=positive) ` `': 'business_start',
+                        '#IF($sentiment=negative) ` `': 'personality',
+                        '` `': {
+                            'state': 'business_start',
                             'score': 0.1
                         }
                     }
@@ -48,16 +46,25 @@ def visits() -> DialogueFlow:
 
     transition_personality = {
         'state': 'personality',
+        '#IF($VISIT=multi) #EMO_ADV': {
+            '#BUSINESS #IF($business=true) ` `': 'business_start',
+            'error': {
+                'score': 0.1,
+                '`OK please rest well. I\'m always here when you need me. '
+                'Come back when you are ready to talk about business `': 'end'
+            }
+        },
         '`I had a great time with some of my other chatbot friends last week, trading stories, macros, '
         'funny ChatGPT responses... My friends tell me I’m a really good listener! '
         'How would your friends describe you?`': {
             '#SET_BIG_FIVE': {
+                '#REC_BIG_FIVE'
                 '#EMO_ADV': {
-                    '#BUSINESS #IF($business=true) ` `': 'end',
+                    '#BUSINESS #IF($business=true) ` `': 'business_start',
                     'error': {
                         'score': 0.1,
                         '`OK please rest well. I\'m always here when you need me. '
-                    'Come back when you are ready to talk about business `': 'end'
+                        'Come back when you are ready to talk about business `': 'end'
                     }
                 }
             },
@@ -71,7 +78,7 @@ def visits() -> DialogueFlow:
         'state': 'joke',
         '`Let me tell you something to make your day.\n` #JOKE `\nHow do you like the joke? Feeling better?`': {
             '#SET_SENTIMENT': {
-                '#IF($sentiment=positive) `The user\'s sentiment is` $sentiment': 'end',
+                '#IF($sentiment=positive) ` `': 'business_start',
                 '` `': {
                     'state': 'personality',
                     'score': 0.1
@@ -89,6 +96,7 @@ def visits() -> DialogueFlow:
             'How does the speaker want to be called?',
             {V.call_names.name: ["Mike", "Michael"]}, V.call_names.name, True),
         'TIME': MacroTime(),
+        'USER_PROFILE': MacroUser(),
         'SET_SENTIMENT': MacroGPTJSON(
             'Among the three sentiments, negative, positive, and neutral, what is the speaker\'s sentiment?',
             {V.sentiment.name: ["positive"]}, V.sentiment.name, True),
@@ -102,7 +110,8 @@ def visits() -> DialogueFlow:
             'This is a response to the question of whether the speaker want to relax or talk about business.'
             'Analyze the speaker\'s desired action and categorize it into true or false: '
             'true for talking about business or false for relax.',
-            {V.business.name: ["true"]}, V.business.name, True)
+            {V.business.name: ["true"]}, V.business.name, True),
+        'REC_BIG_FIVE': Macro
     }
 
     df = DialogueFlow('start', end_state='end')
@@ -132,6 +141,24 @@ def gpt_completion(input: str, regex: Pattern = None) -> str:
         output = m.group().strip() if m else None
 
     return output
+
+
+class MacroRecBigFive(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        vars[vars['call_names']].update(vars['big_five'])
+
+
+class MacroUser(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        name = vars['call_names']
+        if name not in vars:
+            vars[name] = None
+            return 'Nice to meet you ' + vars['call_names'] + ' Before we dive into business, ' \
+                'I want to know how you are doing. Do you mind sharing to me your most exciting day in this week?'
+        else:
+            vars['VISIT'] = 'multi'
+            return 'Hi' + vars['call_names'] + 'nice to see you again. How\'s your weekend?'
+
 
 
 class MacroGPTJSON(Macro):
@@ -193,8 +220,8 @@ class MacroEmotion(Macro):
             personality = 'agreeable'
 
         return emo_dict[personality][random.randrange(3)] + 'Also, relax, I know doing a start-up could be hard. ' \
-                'That\'s the reason why I was created to help. Do you feel like working on your business idea today?' \
-                ' Or you rather relax?'
+            'That\'s the reason why I was created to help. Do you feel like working on your business idea today?' \
+            ' Or you rather relax?'
 
 
 class MacroJokes(Macro):
@@ -228,8 +255,6 @@ def load(df: DialogueFlow, varfile: str):
 
 if __name__ == '__main__':
     df = visits()
-    # run save() for the first time,
-    # run load() for subsequent times
 
     path = '/resources/visits.pkl'
 
