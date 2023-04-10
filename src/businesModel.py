@@ -21,7 +21,7 @@ openai.api_key_path = PATH_API_KEY
 def visits() -> DialogueFlow:
     transition_business = {
         'state': 'business_start',
-        '`Hi, I am so excited to talk to you about your business. \n'
+        '`I am so excited to talk to you about your business. \n'
         'What is its name and are you selling a product or a service? \n'
         'A product is something that people can use and is tangible. \n'
         'Think of a computer or software such as google drive. \n'
