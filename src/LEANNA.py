@@ -14,7 +14,7 @@ import openai
 import regexutils
 import businesModel
 
-PATH_API_KEY = '../resources/openai_api.txt'
+PATH_API_KEY = 'resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
 
 told_jokes = []
