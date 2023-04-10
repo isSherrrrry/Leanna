@@ -58,7 +58,6 @@ def visits() -> DialogueFlow:
         'funny ChatGPT responses... My friends tell me I’m a really good listener! '
         'How would your friends describe you?`': {
             '#SET_BIG_FIVE': {
-                '#REC_BIG_FIVE'
                 '#EMO_ADV': {
                     '#BUSINESS #IF($business=true) ` `': 'business_start',
                     'error': {
@@ -110,8 +109,7 @@ def visits() -> DialogueFlow:
             'This is a response to the question of whether the speaker want to relax or talk about business.'
             'Analyze the speaker\'s desired action and categorize it into true or false: '
             'true for talking about business or false for relax.',
-            {V.business.name: ["true"]}, V.business.name, True),
-        'REC_BIG_FIVE': Macro
+            {V.business.name: ["true"]}, V.business.name, True)
     }
 
     df = DialogueFlow('start', end_state='end')
@@ -141,11 +139,6 @@ def gpt_completion(input: str, regex: Pattern = None) -> str:
         output = m.group().strip() if m else None
 
     return output
-
-
-class MacroRecBigFive(Macro):
-    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        vars[vars['call_names']].update(vars['big_five'])
 
 
 class MacroUser(Macro):
@@ -213,8 +206,13 @@ class MacroEmotion(Macro):
         with open('resources/personality.json') as json_file:
             emo_dict = json.load(json_file)
 
-        ls = vars['big_five']
-        personality = ls[random.randrange(len(ls))]
+        if 'big_five' not in vars[vars['call_names']]:
+            ls = vars['big_five']
+            personality = ls[random.randrange(len(ls))]
+            vars[vars['call_names']].update(ls)
+        else:
+            ls = vars[vars['call_names']]['big_five']
+            personality = ls[random.randrange(len(ls))]
 
         if personality == 'neurotic':
             personality = 'agreeable'
