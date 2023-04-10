@@ -14,7 +14,7 @@ import openai
 import regexutils
 import businesModel
 
-PATH_API_KEY = 'resources/openai_api.txt'
+PATH_API_KEY = '../resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
 
 told_jokes = []
@@ -384,7 +384,7 @@ class MacroGPTJSON(Macro):
 
 class MacroEmotion(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        with open('resources/personality.json') as json_file:
+        with open('../resources/personality.json') as json_file:
             emo_dict = json.load(json_file)
 
         if 'big_five' not in vars[vars['call_names']]:
@@ -405,7 +405,7 @@ class MacroEmotion(Macro):
 
 class MacroJokes(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
-        data = list(csv.reader(open('resources/jokes.csv')))
+        data = list(csv.reader(open('../resources/jokes.csv')))
         index = random.randint(1, len(data))
         while index in told_jokes:
             index = random.randint(1, len(data))
@@ -729,10 +729,10 @@ def load(df: DialogueFlow, varfile: str):
 
 if __name__ == '__main__':
     df = visits()
-    path = 'resources/visits.pkl'
+    path = '../resources/visits.pkl'
     check_file = os.path.isfile(path)
     if check_file:
-        load(df, 'resources/visits.pkl')
+        load(df, '../resources/visits.pkl')
     else:
         df.run()
-        save(df, 'resources/visits.pkl')
+        save(df, '../resources/visits.pkl')
