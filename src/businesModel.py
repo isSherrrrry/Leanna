@@ -39,7 +39,7 @@ def visits() -> DialogueFlow:
                         '`Cool! Let\'s talk about`#GET_SMALL_CAT`in`#GET_BIG_CAT`category!`': 'business_sub'
                     },
                     'error': {
-                        '`Cool!`#GET_AVAIL_CATE`:)`': {
+                        '`Cool!`#GET_AVAIL_CATE`Does that sound good?`': {
                             '#SET_YES_NO': {
                                 '`Cool! Let\'s start.`': 'business_sub'
                             },
@@ -69,7 +69,7 @@ def visits() -> DialogueFlow:
         'I get to know more about`#GET_BUS_NAME`and it was awesome!'
         'Would you like a summary of what we talked about? `': {
             '#SET_YES_NO': {
-                '`#GET_SUMMARY`': 'end'
+                'Here\'s the summary. Thanks for using Leanna! \n`#GET_SUMMARY`': 'end'
             },
             'error': {
                 '`Alright. Thanks for using Leanna! Please come back when you have more ideas. '
@@ -100,8 +100,8 @@ def visits() -> DialogueFlow:
 
     transition_positive = {
         'state': 'business_pos',
-        '#IF($all) `Thanks, I have recorded it to the business plan.`': 'business_end',
-        '`Thanks, I have recorded it to the business plan. What do you want to talk about next?`': {
+        '#IF($all) `Thanks, I have recorded it to the business plan.` #UPDATE_BP': 'business_end',
+        '`Thanks, I have recorded it to the business plan. What do you want to talk about next?` #UPDATE_BP': {
             'state': 'big_small_cat',
             'score': 0.2
         }
@@ -170,8 +170,11 @@ def visits() -> DialogueFlow:
         ),
         'SET_IDEA_EX': MacroGPTJSON_BP(
             'Is the user providing an business idea, requesting another example or wanting to move on to next topic? '
-            'Please choose the answer from the following: businessplan, moveon, example ',
-            {V.ex_choice.name: "businessplan"},
+            'Please choose the answer from the following: businessplan, moveon, example.'
+            'Please also provide the entire input as the next output. '
+            'Phrase them into a json, with the categories (businessplan, moveon, example) as the first element, '
+            'and the input as the second; Only return the json file, please. thanks',
+            {V.ex_choice.name: "businessplan", V.ex_bp.name: "here's the entire input"},
             set_ex_idea
         ),
         'GET_BUS_NAME': MacroNLG(get_bus_name),
@@ -180,7 +183,9 @@ def visits() -> DialogueFlow:
         'GET_SMALL_CAT': MacroNLG(get_small_cat),
         'GET_QUESTION': MacroGetQuestion(),
         'GET_EXAMPLE': MacroGetExample(),
-        'GET_AVAIL_CATE': MacroGetAvailCat()
+        'GET_AVAIL_CATE': MacroGetAvailCat(),
+        'UPDATE_BP': MacroUpdateResponses(),
+        'GET_SUMMARY': MacroPrintResponses()
     }
 
     df = DialogueFlow('business_start', end_state='end')
@@ -209,6 +214,29 @@ class MacroGetQuestion(Macro):
                     break
         vars['SELECTED_QUESTION'] = question_text
         return question_text
+
+class MacroPrintResponses(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        user_responses = vars.get('user_responses', {})
+        response_text = ""
+
+        for small_cat, user_response in user_responses.items():
+            response_text += f"{small_cat}: {user_response}\n\n"
+
+        return response_text.strip()
+
+class MacroUpdateResponses(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        small_cat = vars.get('small_cat')
+        ans_bp = vars.get('ans_bp')
+
+        user_responses = vars.get('user_responses', {})
+
+        if small_cat and ans_bp:
+            user_responses[small_cat] = ans_bp
+            vars['user_responses'] = user_responses
+
+        return True
 
 class MacroGetAvailCat(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
@@ -240,9 +268,6 @@ class MacroGetAvailCat(Macro):
         vars['large_cat'] = chosen_large_cat
         vars['large_cat_name'] = chosen_large_cat
 
-        print(chosen_large_cat)
-        print(chosen_subsec)
-
         return f"I can start you with {chosen_large_cat} in the {chosen_subsec}"
 
 
@@ -255,6 +280,7 @@ class V(Enum):
     user_know = 5
     ans_bp = 6
     ex_choice = 7
+    ex_bp = 8
 
 def gpt_completion(input: str, regex: Pattern = None) -> str:
     response = openai.ChatCompletion.create(
@@ -342,39 +368,6 @@ class MacroGPTJSON(Macro):
 
         return True
 
-class MacroGPTJSON_BS(Macro):
-    def __init__(self, request: str, full_ex: Dict[str, Any], field: str, empty_ex: Dict[str, Any] = None,
-                 set_variables: Callable[[Dict[str, Any], Dict[str, Any]], None] = None):
-        self.request = request
-        self.full_ex = json.dumps(full_ex)
-        self.empty_ex = '' if empty_ex is None else json.dumps(empty_ex)
-        self.check = re.compile(regexutils.generate(full_ex))
-        self.set_variables = set_variables
-        self.field = field
-
-    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        examples = f'{self.full_ex} or {self.empty_ex} if unavailable' if self.empty_ex else self.full_ex
-        prompt = f'{self.request} Respond in the JSON schema such as {examples}: {ngrams.raw_text().strip()}'
-        output = gpt_completion(prompt)
-        if not output: return False
-
-        try:
-            d = json.loads(output)
-        except JSONDecodeError:
-            print(f'Invalid: {output}')
-            return False
-
-        if d is None:
-            return False
-
-        if self.set_variables:
-            self.set_variables(vars, d)
-        else:
-            vars.update(d)
-
-
-        return True
-
 class MacroGPTJSON_BP(Macro):
     def __init__(self, request: str, full_ex: Dict[str, Any], field: str, empty_ex: Dict[str, Any] = None,
                  set_variables: Callable[[Dict[str, Any], Dict[str, Any]], None] = None):
@@ -405,21 +398,61 @@ class MacroGPTJSON_BP(Macro):
         else:
             vars.update(d)
 
+        if d['ex_choice'] == 'businessplan':
+            vars[V.ans_bp.name] = d[V.ex_bp.name]
 
-        small_cat_answers = vars.get('small_cat_answers', {})
+        return True
 
-        vars['user_know'] = d.get('user_know')
-        user_know = d.get('user_know')
-        small_cat = vars.get('small_cat')
-        ans_bp = d.get('ans_bp')
-        if small_cat and ans_bp and user_know is 'yes':
+
+class MacroGPTJSON_BS(Macro):
+    def __init__(self, request: str, full_ex: Dict[str, Any], field: str, empty_ex: Dict[str, Any] = None,
+                 set_variables: Callable[[Dict[str, Any], Dict[str, Any]], None] = None):
+        self.request = request
+        self.full_ex = json.dumps(full_ex)
+        self.empty_ex = '' if empty_ex is None else json.dumps(empty_ex)
+        self.check = re.compile(regexutils.generate(full_ex))
+        self.set_variables = set_variables
+        self.field = field
+
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        examples = f'{self.full_ex} or {self.empty_ex} if unavailable' if self.empty_ex else self.full_ex
+        prompt = f'{self.request} Respond in the JSON schema such as {examples}: {ngrams.raw_text().strip()}'
+        output = gpt_completion(prompt)
+        if not output: return False
+
+        try:
+            d = json.loads(output)
+        except JSONDecodeError:
+            print(f'Invalid: {output}')
+            return False
+
+        if d is None:
+            return False
+
+        if self.set_variables:
+            self.set_variables(vars, d)
+        else:
+            vars.update(d)
+
+        if (d['small_cat'] is None or d['small_cat'] == "N/A") and d['large_cat'] is not None:
             small_cat_answers = vars.get('small_cat_answers', {})
-            small_cat_answers[small_cat] = ans_bp
-            vars['small_cat_answers'] = small_cat_answers
+            talked_subsecs = set(small_cat_answers.keys())
 
-        vars['all'] = False
-        if len(small_cat_answers) == 22:
-            vars['all'] = True
+            all_subsecs = []  # List of all possible subsec values
+
+            with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    subsec = row['subsec']
+                    section = row['Section']
+                    if section == d['large_cat']:
+                        all_subsecs.append(subsec)
+
+            available_subsecs = list(set(all_subsecs) - talked_subsecs)
+
+            chosen_subsec = random.choice(available_subsecs) if available_subsecs else None
+
+            vars[V.small_cat.name] = chosen_subsec
 
         return True
 
@@ -444,11 +477,11 @@ def get_industry(vars: Dict[str, Any]):
     return ls
 
 def get_big_cat(vars: Dict[str, Any]):
-    ls = vars[V.large_cat.name]
+    ls = vars["large_cat"]
     return ls
 
 def get_small_cat(vars: Dict[str, Any]):
-    ls = vars[V.small_cat.name]
+    ls = vars["small_cat"]
     return ls
 
 def set_bus_name(vars: Dict[str, Any], user: Dict[str, Any]):
@@ -468,6 +501,7 @@ def set_know(vars: Dict[str, Any], user: Dict[str, Any]):
 
 def set_ex_idea(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[V.ex_choice.name] = user[V.ex_choice.name]
+    vars[V.ex_bp.name] = user[V.ex_bp.name]
 
 def save(df: DialogueFlow, varfile: str):
     d = {k: v for k, v in df.vars().items() if not k.startswith('_')}
