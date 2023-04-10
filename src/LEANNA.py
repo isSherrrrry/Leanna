@@ -100,7 +100,7 @@ def visits() -> DialogueFlow:
     global_transition = {
         'quit': {
             'score': 1.5,
-            '``': 'business_end'
+            'state': 'business_end'
         }
     }
 
@@ -680,10 +680,12 @@ class MacroNLG(Macro):
 
 
 def get_bus_name(vars: Dict[str, Any]):
-    ls = vars[V.business_name.name]
-    if ls is None:
-        return "Your business"
-    return ls
+    if V.business_name.name in vars:
+        ls = vars[V.business_name.name]
+        if ls is not None:
+            return ls
+    return "Your business"
+
 
 
 def get_industry(vars: Dict[str, Any]):
