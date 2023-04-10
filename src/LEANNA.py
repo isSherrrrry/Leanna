@@ -114,7 +114,7 @@ def visits() -> DialogueFlow:
         'For example, a hair salon or a restaurant service. And what industry is your business in?`': {
             'state': 'bus_name_indu',
             '#SET_BUS_NAME': {
-                '`Thanks for letting me know! That sounds super exciting. \n'
+                '#SAVE_BUS_NAME `Thanks for letting me know! That sounds super exciting. \n'
                 '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`industry. \n'
                 'My role is to help you brainstorm on fuzzy ideas of your business so that you \n'
                 'can have a tangible pitch by the end of our conversation. \n'
@@ -294,7 +294,8 @@ def visits() -> DialogueFlow:
         'GET_EXAMPLE': MacroGetExample(),
         'GET_AVAIL_CATE': MacroGetAvailCat(),
         'UPDATE_BP': MacroUpdateResponses(),
-        'GET_SUMMARY': MacroPrintResponses()
+        'GET_SUMMARY': MacroPrintResponses(),
+        'SAVE_BUS_NAME': MacroSave('business_name')
     }
 
     df = DialogueFlow('start', end_state='end')
@@ -352,6 +353,17 @@ class MacroUser(Macro):
         else:
             vars['VISIT'] = 'multi'
             return 'Hi ' + vars['call_names'] + ', nice to see you again. How\'s your weekend?'
+
+class MacroSave(Macro):
+    def __init__(self, new_stuff):
+        self.save = new_stuff
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        name = vars['call_names'].lower()
+        if name not in vars:
+            vars[name] = {}
+        vars[name].update({self.save: vars[self.save]})
+        # print(vars[name][self.save])
+
 
 
 class MacroGPTJSON(Macro):
