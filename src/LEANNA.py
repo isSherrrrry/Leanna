@@ -47,19 +47,17 @@ def visits() -> DialogueFlow:
 
     transition_personality = {
         'state': 'personality',
-        '#IF($VISIT=multi) ` `': {
-            '# EMO_ADV': {
-                '#BUSINESS #IF($business=true) ` `': 'business_start',
-                'error': {
-                    'score': 0.1,
-                    '`OK please rest well. I\'m always here when you need me. '
-                    'Come back when you are ready to talk about business `': 'end'
-                }
+        '#IF($VISIT=multi) #EMO_ADV': {
+            '#BUSINESS #IF($business=true) ` `': 'business_start',
+            'error': {
+                '`OK please rest well. I\'m always here when you need me. '
+                'Come back when you are ready to talk about business `': 'end'
             }
         },
         '`I had a great time with some of my other chatbot friends last week, trading stories, macros, '
         'funny ChatGPT responses... My friends tell me I’m a really good listener! '
         'How would your friends describe you?`': {
+            'score': 0.5,
             '#SET_BIG_FIVE': {
                 '#EMO_ADV': {
                     '#BUSINESS #IF($business=true) ` `': 'business_start',
@@ -79,11 +77,12 @@ def visits() -> DialogueFlow:
     transition_joke = {
         'state': 'joke',
         '`Let me tell you something to make your day.\n` #JOKE `\nHow do you like the joke? Feeling better?`': {
-            '#SET_SENTIMENT': {
+            '#JOKE_FEEL #SET_SENTIMENT': {
+                '#IF($joke_feel=yes) ` `': 'joke',
                 '#IF($sentiment=positive) ` `': 'business_start',
                 '` `': {
                     'state': 'personality',
-                    'score': 0.1
+                    'score': 0.5
                 }
             },
             'error': {
@@ -119,7 +118,11 @@ def visits() -> DialogueFlow:
             'This is a response to the question of whether the speaker want to relax or talk about business.'
             'Analyze the speaker\'s desired action and categorize it into true or false: '
             'true for talking about business or false for relax.',
-            {V.business.name: ["true"]}, V.business.name, True)
+            {V.business.name: ["true"]}, V.business.name, True),
+        'JOKE_FEEL': MacroGPTJSON(
+            'Is the user requesting more jokes? Answer in yes or no',
+            {V.joke_feel.name: ["yes"]}, V.joke_feel.name, True)
+
     }
 
     df = DialogueFlow('start', end_state='end')
@@ -136,6 +139,7 @@ class V(Enum):
     sentiment = 1
     big_five = 2
     business = 3
+    joke_feel = 4
 
 
 def gpt_completion(input: str, regex: Pattern = None) -> str:
@@ -155,7 +159,6 @@ def gpt_completion(input: str, regex: Pattern = None) -> str:
 class MacroUser(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         name = vars['call_names'].lower()
-        print(vars)
         if name not in vars:
             vars[name] = {}
             return 'Nice to meet you ' + vars['call_names'] + ' Before we dive into business, ' \
@@ -237,7 +240,6 @@ class MacroEmotion(Macro):
 class MacroJokes(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
         data = list(csv.reader(open('resources/jokes.csv')))
-        print(len(data))
         index = random.randint(1, len(data))
         while index in told_jokes:
             index = random.randint(1, len(data))
@@ -258,7 +260,6 @@ def save(df: DialogueFlow, varfile: str):
 
 def load(df: DialogueFlow, varfile: str):
     d = pickle.load(open(varfile, 'rb'))
-    print(d)
     df.vars().update(d)
     df.run()
     save(df, varfile)
@@ -266,11 +267,8 @@ def load(df: DialogueFlow, varfile: str):
 
 if __name__ == '__main__':
     df = visits()
-
     path = 'resources/visits.pkl'
-
     check_file = os.path.isfile(path)
-    print(check_file)
     if check_file:
         load(df, 'resources/visits.pkl')
     else:
