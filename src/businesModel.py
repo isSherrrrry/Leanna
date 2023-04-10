@@ -136,7 +136,7 @@ def visits() -> DialogueFlow:
     }
 
     macros = {
-        'SET_BUS_NAME': MacroGPTJSON(
+        'SET_BUS_NAME': MacroGPTJSON_BUS(
             'Please find the person\'s business name and the industry',
             {V.business_name.name: "Microsoft", V.industry.name:"technology"},
             set_bus_name
@@ -154,14 +154,14 @@ def visits() -> DialogueFlow:
             {V.large_cat.name: "product innovation", V.small_cat.name: "customer needs"},
             set_cat_name
         ),
-        'SET_YES_NO': MacroGPTJSON(
+        'SET_YES_NO': MacroGPTJSON_BUS(
             'Please find out if this means yes or no. '
             'if it means yes, please only return yes in json; '
             'if it means no, please return an empty string in json',
             {V.sounds_yesno.name: "yes"},
             set_yesno
         ),
-        'SET_USER_KNOW': MacroGPTJSON(
+        'SET_USER_KNOW': MacroGPTJSON_BUS(
             'Does the user answer the question well and adequate? Provide binary answer, yes or no.'
             'Please also provide the entire input as the next output. '
             'Phrase them into a json, with yes/no as the first element, and the input as the second;'
