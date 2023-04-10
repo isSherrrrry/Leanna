@@ -524,7 +524,7 @@ class MacroGetExample(Macro):
 
         user_responses = vars.get('user_responses', {})
 
-        if len(vars['user_responses']) != 0:
+        if len(user_responses) != 0:
             if user_responses:
                 encourage = random.choice(list(user_responses.keys()))
             else:
