@@ -90,6 +90,12 @@ def visits() -> DialogueFlow:
 
     }
 
+    global_transition = {
+        '[quit]': {
+            '`Okay. Have a great day!`': 'end'
+        }
+    }
+
     macros = {
         'SET_CALL_NAMES': MacroGPTJSON(
             'How does the speaker want to be called?',
@@ -116,6 +122,7 @@ def visits() -> DialogueFlow:
     df.load_transitions(transition_visit)
     df.load_transitions(transition_personality)
     df.load_transitions(transition_joke)
+    df.load_global_nlu(global_transition)
     df.add_macros(macros)
     return df
 
@@ -174,7 +181,7 @@ class MacroGPTJSON(Macro):
         try:
             d = json.loads(output)
         except JSONDecodeError:
-            print(f'Invalid: {output}')
+            # print(f'Invalid: {output}')
             return False
 
         if self.set_variables:
