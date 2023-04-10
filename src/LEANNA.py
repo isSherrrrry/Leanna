@@ -50,10 +50,10 @@ def visits() -> DialogueFlow:
         '#IF($VISIT=multi) #EMO_ADV': {
             '#BUSINESS': {
                 '#IF($business=true) ` `': 'business_start',
-                'error': {
+                '`OK please rest well. I\'m always here when you need me. '
+                'Come back when you are ready to talk about business `': {
                     'score': 0.1,
-                    '`OK please rest well. I\'m always here when you need me. '
-                    'Come back when you are ready to talk about business `': 'end'
+                    'state': 'end'
                 }
             }
         },
@@ -65,11 +65,11 @@ def visits() -> DialogueFlow:
                 '#EMO_ADV': {
                     '#BUSINESS': {
                         '#IF($business=true) ` `': 'business_start',
-                        'error': {
+                        '`OK please rest well. I\'m always here when you need me. '
+                        'Come back when you are ready to talk about business `': {
                             'score': 0.1,
-                            '`OK please rest well. I\'m always here when you need me. '
-                            'Come back when you are ready to talk about business `': 'end'
-                         }
+                            'state': 'end'
+                        }
                     }
                 }
             },
