@@ -50,6 +50,7 @@ def visits() -> DialogueFlow:
         '#IF($VISIT=multi) #EMO_ADV': {
             '#BUSINESS #IF($business=true) ` `': 'business_start',
             'error': {
+                'score': 0.1,
                 '`OK please rest well. I\'m always here when you need me. '
                 'Come back when you are ready to talk about business `': 'end'
             }
@@ -234,7 +235,7 @@ def visits() -> DialogueFlow:
             'This is a response to the question of whether the speaker want to relax or talk about business.'
             'Analyze the speaker\'s desired action and categorize it into true or false: '
             'true for talking about business or false for relax.',
-            {V.business.name: ["true"]}, V.business.name, True),
+            {V.business.name: ["false"]}, V.business.name, True),
         'JOKE_FEEL': MacroGPTJSON(
             'Is the user requesting more jokes? Answer in yes or no',
             {V.joke_feel.name: ["yes"]}, V.joke_feel.name, True),
@@ -370,7 +371,7 @@ class MacroGPTJSON(Macro):
             d = json.loads(output)
         except JSONDecodeError:
             return False
-
+        # print(d)
         if self.set_variables:
             self.set_variables(vars, d)
         else:
@@ -378,6 +379,8 @@ class MacroGPTJSON(Macro):
         if self.direct:
             ls = vars[self.field]
             vars[self.field] = ls[random.randrange(len(ls))]
+        # print(self.field)
+        # print(vars[self.field])
 
         return True
 
@@ -386,11 +389,12 @@ class MacroEmotion(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         with open('../resources/personality.json') as json_file:
             emo_dict = json.load(json_file)
-
+        personality = None
         if 'big_five' not in vars[vars['call_names']]:
-            ls = vars['big_five']
-            personality = ls[random.randrange(len(ls))]
-            vars[vars['call_names']]['big_five'] = ls
+            if 'big_five' in vars:
+                ls = vars['big_five']
+                personality = ls[random.randrange(len(ls))]
+                vars[vars['call_names']]['big_five'] = ls
         else:
             ls = vars[vars['call_names']]['big_five']
             personality = ls[random.randrange(len(ls))]
@@ -398,10 +402,12 @@ class MacroEmotion(Macro):
         if personality == 'neurotic':
             personality = 'agreeable'
 
-        return emo_dict[personality][random.randrange(3)] + 'Also, relax, I know doing a start-up could be hard. ' \
+        if personality:
+            return emo_dict[personality][random.randrange(3)] + 'Also, relax, I know doing a start-up could be hard. ' \
                                                             'That\'s the reason why I was created to help. Do you feel like working on your business idea today?' \
                                                             ' Or you rather relax?'
-
+        else:
+            return
 
 class MacroJokes(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
