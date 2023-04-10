@@ -39,7 +39,7 @@ def visits() -> DialogueFlow:
                         '`Cool! Let\'s talk about`#GET_SMALL_CAT`in`#GET_BIG_CAT`category!`': 'business_sub'
                     },
                     'error': {
-                        '`Hello `#GET_AVAIL_CATE`hja': {
+                        '`Cool!`#GET_AVAIL_CATE`:)`': {
                             '#SET_YES_NO': {
                                 '`Cool! Let\'s start.`': 'business_sub'
                             },
@@ -210,12 +210,10 @@ class MacroGetQuestion(Macro):
         vars['SELECTED_QUESTION'] = question_text
         return question_text
 
-
 class MacroGetAvailCat(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         small_cat_answers = vars.get('small_cat_answers', {})
         talked_subsecs = set(small_cat_answers.keys())
-        large_cat = vars.get('large_cat', None)
 
         all_subsecs = []  # List of all possible subsec values
         subsec_to_section = {}  # Mapping of subsec values to their corresponding section
@@ -224,19 +222,29 @@ class MacroGetAvailCat(Macro):
             reader = csv.DictReader(csvfile)
             for row in reader:
                 subsec = row['subsec']
-                section = row['section']
-                if large_cat is None or section == large_cat:
-                    all_subsecs.append(subsec)
-                    subsec_to_section[subsec] = section
+                section = row['Section']
+                all_subsecs.append(subsec)
+                subsec_to_section[subsec] = section
 
         available_subsecs = list(set(all_subsecs) - talked_subsecs)
 
-        chosen_subsec = random.choice(available_subsecs)
+        if not available_subsecs:
+            return "Sorry, we have already covered all available subcategories."
+
+        chosen_subsec = random.choice(available_subsecs) if available_subsecs else None
+        if chosen_subsec is None:
+            return "Unfortunately, there are no more subcategories to discuss."
+
         chosen_large_cat = subsec_to_section[chosen_subsec]
         vars['small_cat'] = chosen_subsec
         vars['large_cat'] = chosen_large_cat
+        vars['large_cat_name'] = chosen_large_cat
 
-        return f"Cool! I can start you with {chosen_large_cat} talking about {chosen_subsec}. Does that sound good?"
+        print(chosen_large_cat)
+        print(chosen_subsec)
+
+        return f"I can start you with {chosen_large_cat} in the {chosen_subsec}"
+
 
 class V(Enum):
     business_name = 0
@@ -401,9 +409,10 @@ class MacroGPTJSON_BP(Macro):
         small_cat_answers = vars.get('small_cat_answers', {})
 
         vars['user_know'] = d.get('user_know')
+        user_know = d.get('user_know')
         small_cat = vars.get('small_cat')
         ans_bp = d.get('ans_bp')
-        if small_cat and ans_bp:
+        if small_cat and ans_bp and user_know is 'yes':
             small_cat_answers = vars.get('small_cat_answers', {})
             small_cat_answers[small_cat] = ans_bp
             vars['small_cat_answers'] = small_cat_answers
