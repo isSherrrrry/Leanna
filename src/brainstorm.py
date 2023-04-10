@@ -62,24 +62,33 @@ transition_pos = {
     '`Thanks, I have recorded it to the business plan. What do you want to talk about next?`': 'big_small_cat'
 }
 
-# transition_neg = {
-#     'state': 'neg',
-#     '#EX': {
-#         '#IDEA_EX': {
-#             'IF($ALL=true)': 'final',
-#             'IF($IDEA_EX=business plan) #REC_BUS': 'pos',
-#             'IF($IDEA_EX=example)': 'neg',
-#             'IF($IDEA_EX=move on)': 'next topic',
-#             '`Glad you feel good about this part`': {
-#                 'state': 'next topic',
-#                 'score': 0.1
-#             }
-#         },
-#         'error': {
-#
-#         }
-#     }
-# }
+transition_neg = {
+    'state': 'neg',
+    '#EX': {
+        '#IDEA_EX': {
+            'IF($ALL=true)': 'final',
+            'IF($IDEA_EX=business plan) #REC_BUS': {
+                'state': 'pos',
+                'score': 0.2
+            },
+            'IF($IDEA_EX=example)': {
+                'state': 'neg',
+                'score': 0.2
+            },
+            'IF($IDEA_EX=move on)': {
+                'state': 'next_topic',
+                'score': 0.2
+            },
+            '`Glad you feel good about this part`': {
+                'state': 'next topic',
+                'score': 0.1
+            }
+        },
+        'error': {
+
+        }
+    }
+}
 
 
 class MacroQuestion(Macro):

@@ -2,10 +2,10 @@ import csv
 import json
 import pickle
 import os.path
+import random
 from enum import Enum
 from json import JSONDecodeError
 import re
-from random import random
 
 from emora_stdm import DialogueFlow
 from emora_stdm import Macro, Ngrams
@@ -26,7 +26,7 @@ def visits() -> DialogueFlow:
         'A product is something that people can use and is tangible. \n'
         'Think of a computer or software such as google drive. \n'
         'A service is something you can provide or perform for another person. \n'
-        'For example, a hair salon or a restaurant service.`':{
+        'For example, a hair salon or a restaurant service.`': {
             'state': 'bus_name_indu',
             '#SET_BUS_NAME': {
                 '`Thanks for letting me know! That sounds super exciting.'
@@ -39,8 +39,7 @@ def visits() -> DialogueFlow:
                         '`Cool! Let\'s talk about`#GET_SMALL_CAT`in`#GET_BIG_CAT`category!`': 'business_sub'
                     },
                     'error': {
-                        '`Cool! I can start you with product innovation talking about customer needs. '
-                        'Does that sound good?`': {
+                        '`Hello `#GET_AVAIL_CATE`hja': {
                             '#SET_YES_NO': {
                                 '`Cool! Let\'s start.`': 'business_sub'
                             },
@@ -83,38 +82,54 @@ def visits() -> DialogueFlow:
         'state': 'business_sub',
         '`We are going to brainstorm`#GET_SMALL_CAT`under`#GET_BIG_CAT`category. \n'
         'Let\'s think about this question:\n`#GET_QUESTION` `': {
+            'state': 'set_user_know',
             '#SET_USER_KNOW': {
-                'IF($user_know=yes)': {
-                    '`Thanks, we have recorded it to the business plan. What do you want to talk about next?`': 'big_small_cat'
+                '#IF($user_know=yes)':{
+                    'state': 'business_pos'
                 },
-                '``': {
+                '` `': {
                     'state': 'business_neg',
                     'score': 0.2
                 }
             },
             'error': {
-                '`Alright. Thanks for using Leanna! Please come back when you have more ideas. '
-                'Leanna can always pick up where we have left this time. `': 'end'
+                '`Cool. Can you elaborate more on the plan please? `': 'set_user_know'
             }
+        }
+    }
+
+    transition_positive = {
+        'state': 'business_pos',
+        '#IF($all) `Thanks, I have recorded it to the business plan.`': 'business_end',
+        '`Thanks, I have recorded it to the business plan. What do you want to talk about next?`': {
+            'state': 'big_small_cat',
+            'score': 0.2
         }
     }
 
     transition_negative = {
         'state': 'business_neg',
-        '`We are going to brainstorm`#GET_SMALL_CAT`under`#GET_BIG_CAT`category. \n'
-        'Let\'s think about this question:\n`#GET_QUESTION` `': {
-            '#SET_USER_KNOW': {
-                'IF($user_know=yes)': {
-                    '`Thanks, we have recorded it to the business plan. What do you want to talk about next?`': 'big_small_cat'
+        '#GET_EXAMPLE': {
+            '#SET_IDEA_EX': {
+                '#IF($ex_choice=businessplan)': {
+                    'state': 'business_pos',
+                    'score': 0.2
                 },
-                '``': {
+                '#IF($ex_choice=example)': {
                     'state': 'business_neg',
                     'score': 0.2
+                },
+                '#IF($ex_choice=moveon) `Cool, let\'s move on. What topics do you want to discuss next?`': {
+                    'state': 'big_small_cat',
+                    'score': 0.2
+                },
+                '`Glad you feel good about this part. What topics do you want to discuss next?`': {
+                    'state': 'big_small_cat',
+                    'score': 0.1
                 }
             },
             'error': {
-                '`Alright. Thanks for using Leanna! Please come back when you have more ideas. '
-                'Leanna can always pick up where we have left this time. `': 'end'
+                '`sorry`': 'end'
             }
         }
     }
@@ -125,7 +140,7 @@ def visits() -> DialogueFlow:
             {V.business_name.name: "Microsoft", V.industry.name:"technology"},
             set_bus_name
         ),
-        'SET_BIG_SAMLL_CATE': MacroGPTJSON(
+        'SET_BIG_SAMLL_CATE': MacroGPTJSON_BS(
             'Please classify the input sentence into the following three large categories '
             'and the corresponding small category within each large category: '
             'product innovation (includes customer needs, customer fears, customer wants, '
@@ -146,15 +161,26 @@ def visits() -> DialogueFlow:
             set_yesno
         ),
         'SET_USER_KNOW': MacroGPTJSON(
-            'Does the user answer the question well and adequate? Provide binary answer, yes or no',
-            {V.user_know.name: "yes"},
+            'Does the user answer the question well and adequate? Provide binary answer, yes or no.'
+            'Please also provide the entire input as the next output. '
+            'Phrase them into a json, with yes/no as the first element, and the input as the second;'
+            'Only return the json file, please. thanks',
+            {V.user_know.name: "yes", V.ans_bp.name: "here's the entire input"},
             set_know
+        ),
+        'SET_IDEA_EX': MacroGPTJSON_BP(
+            'Is the user providing an business idea, requesting another example or wanting to move on to next topic? '
+            'Please choose the answer from the following: businessplan, moveon, example ',
+            {V.ex_choice.name: "businessplan"},
+            set_ex_idea
         ),
         'GET_BUS_NAME': MacroNLG(get_bus_name),
         'GET_INDU': MacroNLG(get_industry),
         'GET_BIG_CAT': MacroNLG(get_big_cat),
         'GET_SMALL_CAT': MacroNLG(get_small_cat),
-        'GET_QUESTION': MacroGetQuestion()
+        'GET_QUESTION': MacroGetQuestion(),
+        'GET_EXAMPLE': MacroGetExample(),
+        'GET_AVAIL_CATE': MacroGetAvailCat()
     }
 
     df = DialogueFlow('business_start', end_state='end')
@@ -162,6 +188,7 @@ def visits() -> DialogueFlow:
     df.load_transitions(transition_end)
     df.load_transitions(transition_question)
     df.load_transitions(transition_negative)
+    df.load_transitions(transition_positive)
     df.add_macros(macros)
     return df
 
@@ -183,6 +210,34 @@ class MacroGetQuestion(Macro):
         vars['SELECTED_QUESTION'] = question_text
         return question_text
 
+
+class MacroGetAvailCat(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        small_cat_answers = vars.get('small_cat_answers', {})
+        talked_subsecs = set(small_cat_answers.keys())
+        large_cat = vars.get('large_cat', None)
+
+        all_subsecs = []  # List of all possible subsec values
+        subsec_to_section = {}  # Mapping of subsec values to their corresponding section
+
+        with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                subsec = row['subsec']
+                section = row['section']
+                if large_cat is None or section == large_cat:
+                    all_subsecs.append(subsec)
+                    subsec_to_section[subsec] = section
+
+        available_subsecs = list(set(all_subsecs) - talked_subsecs)
+
+        chosen_subsec = random.choice(available_subsecs)
+        chosen_large_cat = subsec_to_section[chosen_subsec]
+        vars['small_cat'] = chosen_subsec
+        vars['large_cat'] = chosen_large_cat
+
+        return f"Cool! I can start you with {chosen_large_cat} talking about {chosen_subsec}. Does that sound good?"
+
 class V(Enum):
     business_name = 0
     industry = 1
@@ -190,6 +245,8 @@ class V(Enum):
     small_cat = 3
     sounds_yesno = 4
     user_know = 5
+    ans_bp = 6
+    ex_choice = 7
 
 def gpt_completion(input: str, regex: Pattern = None) -> str:
     response = openai.ChatCompletion.create(
@@ -204,6 +261,46 @@ def gpt_completion(input: str, regex: Pattern = None) -> str:
 
     return output
 
+class MacroGetExample(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        small_cat = vars.get('small_cat')
+
+        small_cat = small_cat.replace(" ", "")  # Remove spaces from the small_cat string
+        available_examples = []
+
+        with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row['subsec'] == small_cat:
+                    for col in ['E1', 'E2', 'E3', 'E4']:
+                        available_examples.append(row[col])
+                    break
+
+        used_examples_key = f"USED_EXAMPLES_{small_cat}"
+        used_examples = vars.get(used_examples_key, [])
+
+        remaining_examples = [example for example in available_examples if example not in used_examples]
+
+        if len(remaining_examples) == 0:
+            return "Sorry, I don't have more examples."
+
+        selected_example = remaining_examples[0]  # Select the first remaining example
+        used_examples.append(selected_example)
+        vars[used_examples_key] = used_examples
+
+        small_cat_answers = vars.get('small_cat_answers', {})
+
+        if len(vars['small_cat_answers']) != 0:
+            if small_cat_answers:
+                encourage = random.choice(list(small_cat_answers.keys()))
+            else:
+                encourage = ''
+            return 'Building a start up is a long process. But you have a good business plan on ' \
+                + encourage + ' Here is an ' + vars['small_cat'] + ' example that might help you \n' + \
+                selected_example + ' What do you think about your business plan in this topic now?'
+        else:
+            return 'Here is an ' + vars['small_cat'] + 'example that might help you \n' + \
+                selected_example + ' What do you think about your business plan in this topic now?'
 
 class MacroGPTJSON(Macro):
     def __init__(self, request: str, full_ex: Dict[str, Any], field: str, empty_ex: Dict[str, Any] = None,
@@ -234,6 +331,86 @@ class MacroGPTJSON(Macro):
             self.set_variables(vars, d)
         else:
             vars.update(d)
+
+        return True
+
+class MacroGPTJSON_BS(Macro):
+    def __init__(self, request: str, full_ex: Dict[str, Any], field: str, empty_ex: Dict[str, Any] = None,
+                 set_variables: Callable[[Dict[str, Any], Dict[str, Any]], None] = None):
+        self.request = request
+        self.full_ex = json.dumps(full_ex)
+        self.empty_ex = '' if empty_ex is None else json.dumps(empty_ex)
+        self.check = re.compile(regexutils.generate(full_ex))
+        self.set_variables = set_variables
+        self.field = field
+
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        examples = f'{self.full_ex} or {self.empty_ex} if unavailable' if self.empty_ex else self.full_ex
+        prompt = f'{self.request} Respond in the JSON schema such as {examples}: {ngrams.raw_text().strip()}'
+        output = gpt_completion(prompt)
+        if not output: return False
+
+        try:
+            d = json.loads(output)
+        except JSONDecodeError:
+            print(f'Invalid: {output}')
+            return False
+
+        if d is None:
+            return False
+
+        if self.set_variables:
+            self.set_variables(vars, d)
+        else:
+            vars.update(d)
+
+
+        return True
+
+class MacroGPTJSON_BP(Macro):
+    def __init__(self, request: str, full_ex: Dict[str, Any], field: str, empty_ex: Dict[str, Any] = None,
+                 set_variables: Callable[[Dict[str, Any], Dict[str, Any]], None] = None):
+        self.request = request
+        self.full_ex = json.dumps(full_ex)
+        self.empty_ex = '' if empty_ex is None else json.dumps(empty_ex)
+        self.check = re.compile(regexutils.generate(full_ex))
+        self.set_variables = set_variables
+        self.field = field
+
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        examples = f'{self.full_ex} or {self.empty_ex} if unavailable' if self.empty_ex else self.full_ex
+        prompt = f'{self.request} Respond in the JSON schema such as {examples}: {ngrams.raw_text().strip()}'
+        output = gpt_completion(prompt)
+        if not output: return False
+
+        try:
+            d = json.loads(output)
+        except JSONDecodeError:
+            print(f'Invalid: {output}')
+            return False
+
+        if d is None:
+            return False
+
+        if self.set_variables:
+            self.set_variables(vars, d)
+        else:
+            vars.update(d)
+
+
+        small_cat_answers = vars.get('small_cat_answers', {})
+
+        vars['user_know'] = d.get('user_know')
+        small_cat = vars.get('small_cat')
+        ans_bp = d.get('ans_bp')
+        if small_cat and ans_bp:
+            small_cat_answers = vars.get('small_cat_answers', {})
+            small_cat_answers[small_cat] = ans_bp
+            vars['small_cat_answers'] = small_cat_answers
+
+        vars['all'] = False
+        if len(small_cat_answers) == 22:
+            vars['all'] = True
 
         return True
 
@@ -278,6 +455,10 @@ def set_yesno(vars: Dict[str, Any], user: Dict[str, Any]):
 
 def set_know(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[V.user_know.name] = user[V.user_know.name]
+    vars[V.ans_bp.name] = user[V.ans_bp.name]
+
+def set_ex_idea(vars: Dict[str, Any], user: Dict[str, Any]):
+    vars[V.ex_choice.name] = user[V.ex_choice.name]
 
 def save(df: DialogueFlow, varfile: str):
     d = {k: v for k, v in df.vars().items() if not k.startswith('_')}
