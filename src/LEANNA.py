@@ -28,7 +28,7 @@ def visits() -> DialogueFlow:
             '#SET_CALL_NAMES': {
                 '#USER_PROFILE': {
                     '#SET_SENTIMENT': {
-                        '#IF($sentiment=positive) ` `': 'business_start',
+                        '#IF($sentiment=positive) `Wow, that sounds awesome! `': 'business_start',
                         '#IF($sentiment=neutral) ` `': 'joke',
                         '#IF($sentiment=negative) ` `': 'personality',
                         '` `': {
@@ -126,7 +126,13 @@ def visits() -> DialogueFlow:
                     'error': {
                         '`Cool!`#GET_AVAIL_CATE`Does that sound good?`': {
                             '#SET_YES_NO': {
-                                '`Cool! Let\'s start.`': 'business_sub'
+                                '#IF($sounds_yesno=yes)`Cool! Let\'s start.`': 'business_sub',
+                                '`Okay, what topic you want to start with? '
+                                'We can talk about product innovation, customer relationships, '
+                                'and infrastructure management. `': {
+                                    'score': 0.4,
+                                    'state': 'big_small_cat'
+                                }
                             },
                             'error': {
                                 '`Okay, do want to start with something else? '
@@ -258,14 +264,14 @@ def visits() -> DialogueFlow:
             'intellectual strategy, value chain strategy, architectural strategy, disruption strategy, '
             'trust strengths, and values loyalty) , and infrastructure management (team skills, team culture, '
             'operations, inbound logistics, outbound logistics, and resource gathering).  '
-            'Please only return the large category and small category, and nothing else.',
+            'Please only return the large category and small category, and nothing else. ',
             {V.large_cat.name: "product innovation", V.small_cat.name: "customer needs"},
             set_cat_name
         ),
         'SET_YES_NO': MacroGPTJSON_BUS(
-            'Please find out if this means yes or no. '
-            'if it means yes, please only return yes in json; '
-            'if it means no, please return an empty string in json',
+            'Please find out if the speaker wants to talk about this topic.'
+            'If the speaker wants to, please only return yes.'
+            'If the speaker does not want to, please only return no',
             {V.sounds_yesno.name: "yes"},
             set_yesno
         ),
@@ -551,8 +557,7 @@ class MacroGetExample(Macro):
                 encourage = random.choice(list(user_responses.keys()))
             else:
                 encourage = ''
-            return 'Building a start up is a long process. But you have a good business plan on ' \
-                + encourage + ' Here is an ' + vars['small_cat'] + ' example that might help you \n' + \
+            return 'Here is an ' + vars['small_cat'] + ' example that might help you \n' + \
                 selected_example + ' What do you think about your business plan in this topic now?'
         else:
             return 'Here is an ' + vars['small_cat'] + 'example that might help you \n' + \
@@ -647,7 +652,7 @@ class MacroGPTJSON_BS(Macro):
         try:
             d = json.loads(output)
         except JSONDecodeError:
-            print(f'Invalid: {output}')
+            # print(f'Invalid: {output}')
             return False
 
         if d is None:
