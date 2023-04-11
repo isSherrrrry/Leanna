@@ -449,7 +449,7 @@ class MacroTime(Macro):
 
 class MacroGetQuestion(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        small_cat = vars.get('small_cat')
+        small_cat = vars[vars['call_names']].get('small_cat')
         if small_cat is None:
             return "Please provide a valid subsec."
 
@@ -479,21 +479,21 @@ class MacroPrintResponses(Macro):
 
 class MacroUpdateResponses(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        small_cat = vars.get('small_cat')
-        ans_bp = vars.get('ans_bp')
+        small_cat = vars[vars['call_names']].get('small_cat')
+        ans_bp = vars[vars['call_names']].get('ans_bp')
 
-        user_responses = vars.get('user_responses', {})
+        user_responses = vars[vars['call_names']].get('user_responses', {})
 
         if small_cat and ans_bp:
             user_responses[small_cat] = ans_bp
-            vars['user_responses'] = user_responses
+            vars[vars['call_names']]['user_responses'] = user_responses
 
         return True
 
 
 class MacroGetAvailCat(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        user_responses = vars.get('user_responses', {})
+        user_responses = vars[vars['call_names']].get('user_responses', {})
         talked_subsecs = set(user_responses.keys())
 
         all_subsecs = []  # List of all possible subsec values
@@ -517,15 +517,15 @@ class MacroGetAvailCat(Macro):
             return "Unfortunately, there are no more subcategories to discuss."
 
         chosen_large_cat = subsec_to_section[chosen_subsec]
-        vars['small_cat'] = chosen_subsec
-        vars['large_cat'] = chosen_large_cat
-        vars['large_cat_name'] = chosen_large_cat
+        vars[vars['call_names']]['small_cat'] = chosen_subsec
+        vars[vars['call_names']]['large_cat'] = chosen_large_cat
+        vars[vars['call_names']]['large_cat_name'] = chosen_large_cat
 
         return f"I can start you with {chosen_large_cat} in the {chosen_subsec}"
 
 class MacroGetExample(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        small_cat = vars.get('small_cat')
+        small_cat = vars[vars['call_names']].get('small_cat')
 
         small_cat = small_cat.replace(" ", "")  # Remove spaces from the small_cat string
         available_examples = []
@@ -539,7 +539,7 @@ class MacroGetExample(Macro):
                     break
 
         used_examples_key = f"USED_EXAMPLES_{small_cat}"
-        used_examples = vars.get(used_examples_key, [])
+        used_examples = vars[vars['call_names']].get(used_examples_key, [])
 
         remaining_examples = [example for example in available_examples if example not in used_examples]
 
@@ -590,9 +590,9 @@ class MacroGPTJSON_BUS(Macro):
             return False
 
         if self.set_variables:
-            self.set_variables(vars, d)
+            self.set_variables(vars[vars['call_names']], d)
         else:
-            vars.update(d)
+            vars[vars['call_names']].update(d)
 
         return True
 
@@ -623,12 +623,12 @@ class MacroGPTJSON_BP(Macro):
             return False
 
         if self.set_variables:
-            self.set_variables(vars, d)
+            self.set_variables(vars[vars['call_names']], d)
         else:
-            vars.update(d)
+            vars[vars['call_names']].update(d)
 
         if d['ex_choice'] == 'businessplan':
-            vars[V.ans_bp.name] = d[V.ex_bp.name]
+            vars[vars['call_names']][V.ans_bp.name] = d[V.ex_bp.name]
 
         return True
 
@@ -659,14 +659,14 @@ class MacroGPTJSON_BS(Macro):
             return False
 
         if self.set_variables:
-            self.set_variables(vars, d)
+            self.set_variables(vars[vars['call_names']], d)
         else:
-            vars.update(d)
+            vars[vars['call_names']].update(d)
 
         vars['bus_true'] = True
 
         if (d['small_cat'] is None or d['small_cat'] == "N/A") and d['large_cat'] is not None:
-            user_responses = vars.get('user_responses', {})
+            user_responses = vars[vars['call_names']].get('user_responses', {})
             talked_subsecs = set(user_responses.keys())
 
             all_subsecs = []  # List of all possible subsec values
@@ -683,7 +683,7 @@ class MacroGPTJSON_BS(Macro):
 
             chosen_subsec = random.choice(available_subsecs) if available_subsecs else None
 
-            vars[V.small_cat.name] = chosen_subsec
+            vars[vars['call_names']][V.small_cat.name] = chosen_subsec
 
         return True
 
@@ -698,7 +698,7 @@ class MacroNLG(Macro):
 
 def get_bus_name(vars: Dict[str, Any]):
     if V.business_name.name in vars:
-        ls = vars[V.business_name.name]
+        ls = vars[vars['call_names']][V.business_name.name]
         if ls is not None:
             return ls
     return "Your business"
@@ -706,28 +706,30 @@ def get_bus_name(vars: Dict[str, Any]):
 
 
 def get_industry(vars: Dict[str, Any]):
-    ls = vars[V.industry.name]
+    ls = vars[vars['call_names']][V.industry.name]
     return ls
 
 
 def get_big_cat(vars: Dict[str, Any]):
-    ls = vars["large_cat"]
+    ls = vars[vars['call_names']]["large_cat"]
     return ls
 
 
 def get_small_cat(vars: Dict[str, Any]):
-    ls = vars["small_cat"]
+    ls = vars[vars['call_names']]["small_cat"]
     return ls
 
 
 def set_bus_name(vars: Dict[str, Any], user: Dict[str, Any]):
-    vars[V.business_name.name] = user[V.business_name.name]
-    vars[V.industry.name] = user[V.industry.name]
+    vars[vars['call_names']][V.business_name.name] = user[V.business_name.name]
+    vars[vars['call_names']][V.industry.name] = user[V.industry.name]
+    print("hello")
+    print(vars[vars['call_names']][V.industry.name])
 
 
 def set_cat_name(vars: Dict[str, Any], user: Dict[str, Any]):
-    vars[V.large_cat.name] = user[V.large_cat.name]
-    vars[V.small_cat.name] = user[V.small_cat.name]
+    vars[vars['call_names']][V.large_cat.name] = user[V.large_cat.name]
+    vars[vars['call_names']][V.small_cat.name] = user[V.small_cat.name]
 
 
 def set_yesno(vars: Dict[str, Any], user: Dict[str, Any]):
@@ -736,12 +738,12 @@ def set_yesno(vars: Dict[str, Any], user: Dict[str, Any]):
 
 def set_know(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[V.user_know.name] = user[V.user_know.name]
-    vars[V.ans_bp.name] = user[V.ans_bp.name]
+    vars[vars['call_names']][V.ans_bp.name] = user[V.ans_bp.name]
 
 
 def set_ex_idea(vars: Dict[str, Any], user: Dict[str, Any]):
-    vars[V.ex_choice.name] = user[V.ex_choice.name]
-    vars[V.ex_bp.name] = user[V.ex_bp.name]
+    vars[vars['call_names']][V.ex_choice.name] = user[V.ex_choice.name]
+    vars[vars['call_names']][V.ex_bp.name] = user[V.ex_bp.name]
 
 
 def save(df: DialogueFlow, varfile: str):
