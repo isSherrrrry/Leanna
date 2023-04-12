@@ -23,8 +23,8 @@ told_jokes = []
 def visits() -> DialogueFlow:
     transition_visit = {
         'state': 'start',
-        '`Hi, I\'m Leanna, your personal start-up consultant. At` #TIME `, I had the pleasure to meet '
-        ' \n With time as our guide, our encounter was meant to be. May I know the name of future business tycoon?`': {
+        '`Hi, I\'m Leanna, your personal start-up consultant. At` #TIME `, I had the pleasure to meet you.'
+        ' \n With time as our guide, our encounter was meant to be. May I know the name of our future business tycoon?`': {
             '#SET_CALL_NAMES': {
                 '#USER_PROFILE': {
                     '#SET_SENTIMENT': {
@@ -51,7 +51,7 @@ def visits() -> DialogueFlow:
             '#BUSINESS': {
                 '#IF($business=true) ` `': 'business_start',
                 '`OK please rest well. I\'m always here when you need me. '
-                'Come back when you are ready to talk about business `': {
+                'Come back when you are ready to talk about business. `': {
                     'score': 0.1,
                     'state': 'end'
                 }
@@ -66,7 +66,7 @@ def visits() -> DialogueFlow:
                     '#BUSINESS': {
                         '#IF($business=true) ` `': 'business_start',
                         '`OK please rest well. I\'m always here when you need me. '
-                        'Come back when you are ready to talk about business `': {
+                        'Come back when you are ready to talk about business. `': {
                             'score': 0.1,
                             'state': 'end'
                         }
@@ -74,14 +74,14 @@ def visits() -> DialogueFlow:
                 }
             },
             'error': {
-                '`I don\'t understand you`': 'end'
+                '`I didn\'t understand you`': 'end'
             }
         }
     }
 
     transition_joke = {
         'state': 'joke',
-        '`Let me tell you something to make your day.\n` #JOKE `\nHow do you like the joke? Feeling better?`': {
+        '`Let me tell you something to brighten your day.\n` #JOKE `\nDid you like the joke? Feeling better?`': {
             '#JOKE_FEEL #SET_SENTIMENT': {
                 '#IF($joke_feel=yes) ` `': 'joke',
                 '#IF($sentiment=positive) ` `': 'business_start',
@@ -91,7 +91,7 @@ def visits() -> DialogueFlow:
                 }
             },
             'error': {
-                '`I don\'t understand you`': 'end'
+                '`I didn\'t understand you`': 'end'
             }
         }
 
@@ -158,7 +158,7 @@ def visits() -> DialogueFlow:
         'state': 'business_end',
         '`Thanks! Have a good one.`': 'end',
         '#IF($bus_true) `Thank you so much for talking with me. This interaction has been fabulous. '
-        'I get to know more about`#GET_BUS_NAME`and it was awesome!'
+        'I got to know more about`#GET_BUS_NAME`and it was awesome!'
         'Would you like a summary of what we talked about? `': {
             '#SET_YES_NO': {
                 'Here\'s the summary. Thanks for using Leanna! \n`#GET_SUMMARY`': 'end'
@@ -354,8 +354,8 @@ class MacroUser(Macro):
         name = vars['call_names'].lower()
         if name not in vars:
             vars[name] = {}
-            return 'Nice to meet you ' + vars['call_names'] + ' Before we dive into business, ' \
-                                                              'I want to know how you are doing. Do you mind sharing to me your most exciting day in this week?'
+            return 'Nice to meet you ' + vars['call_names'] + '. Before we dive into business, ' \
+                                                              'I want to know how you are doing. Do you mind sharing with me how your week has been?'
         else:
             vars['VISIT'] = 'multi'
             return 'Hi ' + vars['call_names'] + ', nice to see you again. How\'s your weekend?'
