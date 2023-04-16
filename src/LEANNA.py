@@ -124,8 +124,8 @@ def visits() -> DialogueFlow:
                         '`Cool! Let\'s talk about`#GET_SMALL_CAT`in`#GET_BIG_CAT`category!`': 'business_sub'
                     },
                     'error': {
-                        '`Cool!`#GET_AVAIL_CATE`Does that sound good?`': {
-                            '#SET_YES_NO': {
+                        '`Cool!`#GET_AVAIL_CATE` Do you want to start with this topic?`': {
+                            '#SET_YES_NO_Topic': {
                                 '#IF($sounds_yesno=yes)`Cool! Let\'s start.`': 'business_sub',
                                 '`Okay, what topic you want to start with? '
                                 'We can talk about product innovation, customer relationships, '
@@ -160,12 +160,11 @@ def visits() -> DialogueFlow:
         '#IF($bus_true) `Thank you so much for talking with me. This interaction has been fabulous. '
         'I got to know more about`#GET_BUS_NAME`and it was awesome!'
         'Would you like a summary of what we talked about? `': {
-            '#SET_YES_NO': {
-                'Here\'s the summary. Thanks for using Leanna! \n`#GET_SUMMARY`': 'end'
-            },
-            'error': {
-                '`Alright. Thanks for using Leanna! Please come back when you have more ideas. '
-                'Leanna can always pick up where we have left this time. `': 'end'
+            '#IF($summary=yes) `Here\'s the summary. Thanks for using Leanna! \n`#GET_SUMMARY`': 'end',
+            '`Alright. Thanks for using Leanna! Please come back when you have more ideas. '
+            'Leanna can always pick up where we have left this time. `': {
+                'score': 0.2,
+                'state': 'end'
             }
         }
     }
@@ -249,7 +248,6 @@ def visits() -> DialogueFlow:
         'JOKE_FEEL': MacroGPTJSON(
             'Is the user requesting more jokes? Answer in yes or no',
             {V.joke_feel.name: ["yes"]}, V.joke_feel.name, True),
-
         'SET_BUS_NAME': MacroGPTJSON_BUS(
             'Please find the person\'s business name and the industry',
             {V.business_name.name: "Microsoft", V.industry.name: "technology"},
@@ -268,10 +266,10 @@ def visits() -> DialogueFlow:
             {V.large_cat.name: "product innovation", V.small_cat.name: "customer needs"},
             set_cat_name
         ),
-        'SET_YES_NO': MacroGPTJSON_BUS(
-            'Please find out if the speaker wants to talk about this topic.'
-            'If the speaker wants to, please only return yes.'
-            'If the speaker does not want to, please only return no',
+        'SET_YES_NO_Topic': MacroGPTJSON_BUS(
+            'Please find out if the speaker\'s feeling about this topic.'
+            'If the speaker thinks the topic is good or wants to discuss it, please only return yes.'
+            'If the speaker wants a new topic or does not like this topic, please only return no',
             {V.sounds_yesno.name: "yes"},
             set_yesno
         ),
@@ -283,6 +281,9 @@ def visits() -> DialogueFlow:
             {V.user_know.name: "yes", V.ans_bp.name: "here's the entire input"},
             set_know
         ),
+        'SET_YES_NO': MacroGPTJSON(
+            'Does the speaker wants an summary of what we have talked about? Return yes or no',
+            {V.summary.name: ["mike"]}, V.summary.name, True),
         'SET_IDEA_EX': MacroGPTJSON_BP(
             'Is the user providing an business idea, requesting another example or wanting to move on to next topic? '
             'Please choose the answer from the following: businessplan, moveon, example.'
@@ -333,6 +334,7 @@ class V(Enum):
     ans_bp = 11
     ex_choice = 12
     ex_bp = 13
+    summary = 14
 
 
 def gpt_completion(input: str, regex: Pattern = None) -> str:
@@ -355,7 +357,7 @@ class MacroUser(Macro):
         if name not in vars:
             vars[name] = {}
             return 'Nice to meet you ' + vars['call_names'] + '. Before we dive into business, ' \
-                                                              'I want to know how you are doing. Do you mind sharing with me how your week has been?'
+                    'I want to know how you are doing. Do you mind sharing with me how your week has been?'
         else:
             vars['VISIT'] = 'multi'
             return 'Hi ' + vars['call_names'] + ', nice to see you again. How\'s your weekend?'
