@@ -30,21 +30,21 @@ def visits() -> DialogueFlow:
             'state': 'bus_name_indu',
             '#SET_BUS_NAME': {
                 '`Thanks for letting me know! That sounds super exciting.'
-                '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`industry. '
+                '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`company. '
                 'My role is to help you brainstorm on fuzzy ideas of your business so that you '
                 'can have a tangible pitch by the end of our conversation. '
-                'Is there a particular problem area you would like to brainstorm about first?`' : {
+                'Is there a particular problem area you would like to brainstorm about first? We can brainstorm about product innovation, customer relationships, and infrastructure managment.`' : {
                     'state': 'big_small_cat',
                     '#SET_BIG_SAMLL_CATE': {
                         '`Cool! Let\'s talk about`#GET_SMALL_CAT`in`#GET_BIG_CAT`category!`': 'business_sub'
                     },
                     'error': {
-                        '`Cool!`#GET_AVAIL_CATE`Does that sound good?`': {
+                        '`Cool! We can chat about`#GET_AVAIL_CATE`. Does that sound good?`': {
                             '#SET_YES_NO': {
                                 '`Cool! Let\'s start.`': 'business_sub'
                             },
                             'error':{
-                                '`Okay, do want to start with something else? '
+                                '`Okay, do you want to start with something else? '
                                 'We can talk about product innovation, customer relationships, '
                                 'and infrastructure management. '
                                 'You can always leave Leanna and come back later. '
