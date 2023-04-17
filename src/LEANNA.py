@@ -19,7 +19,7 @@ openai.api_key_path = PATH_API_KEY
 
 told_jokes = []
 
-
+#fix dialogue - jessie
 def visits() -> DialogueFlow:
     transition_visit = {
         'state': 'start',
