@@ -115,7 +115,7 @@ def visits() -> DialogueFlow:
             'state': 'bus_name_indu',
             '#SET_BUS_NAME': {
                 '#SAVE_BUS_NAME `Thanks for letting me know! That sounds super exciting. \n'
-                '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`industry. \n'
+                '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU` company. \n'
                 'My role is to help you brainstorm on fuzzy ideas of your business so that you \n'
                 'can have a tangible pitch by the end of our conversation. \n'
                 'Is there a particular problem area you would like to brainstorm about first?`': {
@@ -149,7 +149,7 @@ def visits() -> DialogueFlow:
                 '`I\'m sorry I did not get your business industry. '
                 'We recommend using Leanna when you have an idea in the industry you want to be working at. '
                 'You can always leave Leanna and come back later. Just type \'quit\' to leave. '
-                'Now, do you want to try again by telling us about your business name and industry?`': 'bus_name_indu'
+                'Now, do you want to try again by telling us about your business name, business type, and the industry?`': 'bus_name_indu'
             }
         }
     }
@@ -158,7 +158,7 @@ def visits() -> DialogueFlow:
         'state': 'business_end',
         '`Thanks! Have a good one.`': 'end',
         '#IF($bus_true) `Thank you so much for talking with me. This interaction has been fabulous. '
-        'I got to know more about`#GET_BUS_NAME`and it was awesome!'
+        'I got to know more about`#GET_BUS_NAME`and it was awesome! I hope you gained some new insights as well by answering my questions.'
         'Would you like a summary of what we talked about? `': {
             '#IF($summary=yes) `Here\'s the summary. Thanks for using Leanna! \n`#GET_SUMMARY`': 'end',
             '`Alright. Thanks for using Leanna! Please come back when you have more ideas. '
@@ -172,7 +172,7 @@ def visits() -> DialogueFlow:
     transition_question = {
         'state': 'business_sub',
         '`We are going to brainstorm`#GET_SMALL_CAT`under`#GET_BIG_CAT`category. \n'
-        'Let\'s think about this question:\n`#GET_QUESTION` `': {
+        'Let\'s think about this question prompt to get your creative juices flowing:\n`#GET_QUESTION` `': {
             'state': 'set_user_know',
             '#SET_USER_KNOW': {
                 '#IF($user_know=yes)': {
@@ -184,15 +184,15 @@ def visits() -> DialogueFlow:
                 }
             },
             'error': {
-                '`Cool. Can you elaborate more on the plan please? `': 'set_user_know'
+                '`I am not sure I completely get it. Can you elaborate more on how your business fits under the prompt please? Brainstorming clearly and completely is important for implementation.`': 'set_user_know'
             }
         }
     }
 
     transition_positive = {
         'state': 'business_pos',
-        '#IF($all) `Thanks, I have recorded it to the business plan.` #UPDATE_BP': 'business_end',
-        '`Thanks, I have recorded it to the business plan. What do you want to talk about next?` #UPDATE_BP': {
+        '#IF($all) `Thanks, I have recorded it to the our meeting notes.` #UPDATE_BP': 'business_end',
+        '`Thanks, I have recorded it to the meeting notes. What do you want to talk about next under the big brainstorm umbrellas of product innovation, customer relationships, and infrastructure managment?` #UPDATE_BP': {
             'state': 'big_small_cat',
             'score': 0.2
         }
@@ -210,11 +210,11 @@ def visits() -> DialogueFlow:
                     'state': 'business_neg',
                     'score': 0.2
                 },
-                '#IF($ex_choice=moveon) `Cool, let\'s move on. What topics do you want to discuss next?`': {
+                '#IF($ex_choice=moveon) `I hear you, let\'s move on. What topics do you want to discuss next? We can brainstorm about product innovation, customer relationships, and infrastructure managment.`': {
                     'state': 'big_small_cat',
                     'score': 0.2
                 },
-                '`Glad you feel good about this part. What topics do you want to discuss next?`': {
+                '`Glad you feel confident on this part. What topics do you want to discuss next? We can brainstorm about product innovation, customer relationships, and infrastructure managment. `': {
                     'state': 'big_small_cat',
                     'score': 0.1
                 }
