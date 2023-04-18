@@ -115,7 +115,7 @@ def visits() -> DialogueFlow:
             'state': 'bus_name_indu',
             '#SET_BUS_NAME': {
                 '#SAVE_BUS_NAME `Thanks for letting me know! That sounds super exciting. \n'
-                '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU` company. \n'
+                '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`company. \n'
                 'My role is to help you brainstorm on fuzzy ideas of your business so that you \n'
                 'can have a tangible pitch by the end of our conversation. \n'
                 'Is there a particular problem area you would like to brainstorm about first?`': {
@@ -455,7 +455,6 @@ class MacroGetQuestion(Macro):
         if small_cat is None:
             return "Please provide a valid subsec."
 
-        small_cat = small_cat.replace(" ", "")  # Remove spaces from the small_cat string
         question_text = None
 
         with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
@@ -485,6 +484,7 @@ class MacroUpdateResponses(Macro):
         ans_bp = vars[vars['call_names']].get('ans_bp')
 
         user_responses = vars[vars['call_names']].get('user_responses', {})
+        print(user_responses)
 
         if small_cat and ans_bp:
             user_responses[small_cat] = ans_bp
@@ -529,7 +529,6 @@ class MacroGetExample(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         small_cat = vars[vars['call_names']].get('small_cat')
 
-        small_cat = small_cat.replace(" ", "")  # Remove spaces from the small_cat string
         available_examples = []
 
         with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
@@ -741,6 +740,7 @@ def set_yesno(vars: Dict[str, Any], user: Dict[str, Any]):
 def set_know(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[V.user_know.name] = user[V.user_know.name]
     vars[vars['call_names']][V.ans_bp.name] = user[V.ans_bp.name]
+    print(vars[vars['call_names']][V.ans_bp.name])
 
 
 def set_ex_idea(vars: Dict[str, Any], user: Dict[str, Any]):
