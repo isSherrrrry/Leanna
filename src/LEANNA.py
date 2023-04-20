@@ -138,8 +138,7 @@ def visits() -> DialogueFlow:
                     '#DEL_PROFILE `Sorry to hear that, but I\'m really interested in your new business. '
                     'What is its name?`': 'bus_name_indu'
                 },
-                '`Last time, we talked about #talked_sub do you want to revisit any of these topics \
-                or you want to start a new topic?`': {
+                '`#talked_sub Do you want to revisit any of these topics or you want to start a new topic?`': {
                     'score': 0.4,
                     'state': 'big_small_cat'
                 }
@@ -423,7 +422,7 @@ def gpt_completion(input: str, regex: Pattern = None) -> str:
     return output
 
 
-class MacroDelProfile():
+class MacroDelProfile(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         del vars[vars['call_names']]['talked_subsecs']
         del vars[vars['call_names']]['user_responses']
@@ -436,8 +435,7 @@ class MacroCheckTalk(Macro):
             if vars[vars['call_names']].get('get_small_cat') in talked_sub:
                 prev_plan = vars[vars['call_names']]['user_responses'][vars['get_small_cat']]
                 str = 'I asked you about' + vars['SELECTED_QUESTION'] + 'last time and your ' \
-                                                                        'previous plan is ' + prev_plan + '. ' \
-                                                                                                          'What do you think about it now?'
+                    'previous plan is ' + prev_plan + '. ' + 'What do you think about it now?'
                 return str
             else:
                 small_cat = vars[vars['call_names']].get('get_small_cat')
@@ -454,7 +452,11 @@ class MacroTalkedSub(Macro):
         for i in range(len(talked_sub)):
             str += talked_sub[i] + ', '
 
-        return str
+        if talked_sub == '':
+            return 'It was nice to meet you but we did not get to any of the business element during our last ' \
+                   'conversation. Is there a particular problem area you would like to brainstorm about'
+        return 'Last time we talked about ' + str + ' categories. Do you want to revisit any of the previous topic ' \
+                                                    'or you would to talk a new one'
 
 
 class MacroUser(Macro):
