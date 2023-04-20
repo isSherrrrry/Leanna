@@ -138,7 +138,7 @@ def visits() -> DialogueFlow:
                     '#DEL_PROFILE `Sorry to hear that, but I\'m really interested in your new business. '
                     'What is its name?`': 'bus_name_indu'
                 },
-                '`#talked_sub Do you want to revisit any of these topics or you want to start a new topic?`': {
+                '`#talked_sub`': {
                     'score': 0.4,
                     'state': 'big_small_cat'
                 }
