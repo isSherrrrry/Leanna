@@ -28,8 +28,8 @@ def visits() -> DialogueFlow:
             '#SET_CALL_NAMES': {
                 '#USER_PROFILE': {
                     '#SET_SENTIMENT': {
-                        '#IF($sentiment=positive) `Wow, that sounds awesome! `': 'business_start',
-                        '#IF($sentiment=neutral) ` `': 'joke',
+                        '#IF($sentiment=positive) #DEL_ADV `Wow, that sounds awesome! `': 'emobus',
+                        '#IF($sentiment=neutral) #DEL_ADV ` `': 'joke',
                         '#IF($sentiment=negative) ` `': 'personality',
                         '` `': {
                             'state': 'business_start',
@@ -41,7 +41,32 @@ def visits() -> DialogueFlow:
             'error': {
                 '`Sorry`': 'start'
             }
+        }
+    }
 
+    transition_emobus = {
+        'state': 'emobus',
+        '#IF($VISIT=multi) `How\'s your business model going so far?`': {
+            '#SET_BUS_EMO #SET_BIG_SAMLL_CATE': {
+                '#IF($sentiment=negative) `Sounds like you are having trouble with` #GET_SMALL_CAT `in` #GET_BIG_CAT `. '
+                'Would you like to work on that today?`': {
+                    '#SET_YES_NO': {
+                        '#IF($summary=yes)': 'business_sub',
+                        '`Okay, that\'s totally fine. Then, is there a particular area you want to work on?`': {
+                            'score': 0.1,
+                            'state': 'big_small_cat'
+                        }
+                    }
+                },
+                '`Glad to hear that!`': {
+                    'score': 0.1,
+                    'state': 'end'
+                }
+            }
+        },
+        '`Could you tell me a little bit about your entrepreneurial journey so far?`': {
+            'score': 0.1,
+            'state': 'end'
         }
     }
 
@@ -49,7 +74,7 @@ def visits() -> DialogueFlow:
         'state': 'personality',
         '#IF($VISIT=multi) #EMO_ADV': {
             '#BUSINESS': {
-                '#IF($business=true) ` `': 'business_start',
+                '#IF($business=true) ` `': 'emobus',
                 '`OK please rest well. I\'m always here when you need me. '
                 'Come back when you are ready to talk about business. `': {
                     'score': 0.1,
@@ -283,6 +308,9 @@ def visits() -> DialogueFlow:
         'JOKE_FEEL': MacroGPTJSON(
             'Is the user requesting more jokes? Answer in yes or no',
             {V.joke_feel.name: ["yes"]}, V.joke_feel.name, True),
+        'SET_BUS_EMO': MacroGPTJSON(
+            'Categorize speaker\'s response based on if he is struggling. Positive for no trouble and negative for having trouble.',
+            {V.sentiment.name: ["positive"]}, V.sentiment.name, True),
         'SET_BUS_NAME': MacroGPTJSON_BUS(
             'Please find the person\'s business name and the industry',
             {V.business_name.name: "Microsoft", V.industry.name: "technology"},
@@ -317,7 +345,7 @@ def visits() -> DialogueFlow:
             set_know
         ),
         'SET_YES_NO': MacroGPTJSON(
-            'Does the speaker wants an summary of what we have talked about? Return yes or no',
+            'The speaker is answering a yes/no question. Categorize if he means yes or no.',
             {V.summary.name: ["yes"]}, V.summary.name, True),
         'SET_IDEA_EX': MacroGPTJSON_BP(
             'Is the user providing an business idea, requesting another example or wanting to move on to next topic? '
@@ -349,6 +377,7 @@ def visits() -> DialogueFlow:
 
     df = DialogueFlow('start', end_state='end')
     df.load_transitions(transition_visit)
+    df.load_transitions(transition_emobus)
     df.load_transitions(transition_personality)
     df.load_transitions(transition_joke)
     df.load_global_nlu(global_transition)
@@ -438,7 +467,10 @@ class MacroUser(Macro):
                                                               'I want to know how you are doing. Do you mind sharing with me how your week has been?'
         else:
             vars['VISIT'] = 'multi'
-            return 'Hi ' + vars['call_names'] + ', nice to see you again. How\'s your weekend?'
+            if 'prev_adv' in vars[vars['call_names']]:
+                return 'Hi ' + vars['call_names'] + ', nice to see you again. Did you try the advice I gave you last time? How was it?'
+            else:
+                return 'Hi ' + vars['call_names'] + ', nice to see you again. How\'s your weekend?'
 
 
 class MacroSave(Macro):
@@ -506,12 +538,21 @@ class MacroEmotion(Macro):
             personality = 'agreeable'
 
         if personality:
-            return emo_dict[personality][random.randrange(3)] + 'Also, relax, I know doing a start-up could be hard. ' \
-                                                                'That\'s the reason why I was created to help. Do you feel like working on your business idea today?' \
-                                                                ' Or you rather relax?'
+            adv = emo_dict[personality][random.randrange(3)]
+            if 'prev_adv' in vars[vars['call_names']]:
+                while vars[vars['call_names']]['prev_adv'] == adv:
+                    adv = emo_dict[personality][random.randrange(3)]
+            vars[vars['call_names']]['prev_adv'] = adv
+            return adv + 'Also, relax, I know doing a start-up could be hard. ' \
+                                                            'That\'s the reason why I was created to help. Do you feel like working on your business idea today?' \
+                                                            ' Or you rather relax?'
         else:
             return
 
+class MacroDelAdv(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        if 'prev_adv' in vars[vars['call_names']]:
+            vars[vars['call_names']]['prev_adv'] = None
 
 class MacroJokes(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
@@ -837,6 +878,8 @@ def save(df: DialogueFlow, varfile: str):
 
 def load(df: DialogueFlow, varfile: str):
     d = pickle.load(open(varfile, 'rb'))
+    d['call_names'] = None
+    d['VISIT'] = None
     df.vars().update(d)
     df.run()
     save(df, varfile)
