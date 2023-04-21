@@ -52,15 +52,15 @@ def visits() -> DialogueFlow:
                 'Would you like to work on that today?`': {
                     '#SET_YES_NO': {
                         '#IF($summary=yes)': 'business_sub',
-                        '`Okay, that\'s totally fine. Then, is there a particular area you want to work on?`': {
+                        '`Okay, that\'s totally fine. `': {
                             'score': 0.1,
-                            'state': 'big_small_cat'
+                            'state': 'business_start'
                         }
                     }
                 },
                 '`Glad to hear that!`': {
                     'score': 0.1,
-                    'state': 'end'
+                    'state': 'business_start'
                 }
             }
         },
