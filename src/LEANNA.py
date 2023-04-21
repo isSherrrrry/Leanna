@@ -66,7 +66,7 @@ def visits() -> DialogueFlow:
         },
         '`Could you tell me a little bit about your entrepreneurial journey so far?`': {
             'score': 0.1,
-            'state': 'end'
+            'state': 'business_start'
         }
     }
 
@@ -147,6 +147,7 @@ def visits() -> DialogueFlow:
                 '`sorry I don\'t understand you`': 'business_part'
             }
         },
+
         '`I am so excited to talk to you about your business. \n'
         'What is its name and are you selling a product or a service? \n'
         'A product is something that people can use and is tangible. \n'
@@ -157,7 +158,7 @@ def visits() -> DialogueFlow:
             'state': 'bus_name_indu',
             '#SET_BUS_NAME': {
                 '`Thanks for letting me know! That sounds super exciting. \n'
-                '#GET_BUS_NAME `is sure to change the world one day as a fantastic`#GET_INDU`company. \n'
+                '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`company. \n'
                 'My role is to help you brainstorm on fuzzy ideas of your business so that you \n'
                 'can have a tangible pitch by the end of our conversation. \n'
                 'Is there a particular problem area you would like to brainstorm about first?`': {
@@ -198,22 +199,28 @@ def visits() -> DialogueFlow:
 
     transition_end = {
         'state': 'business_end',
-        '`Thanks! Have a good one.`': 'end',
-        '#IF($bus_true) `Thank you so much for talking with me. This interaction has been fabulous. \n'
+        '#IF($bus_true=True) `Thank you so much for talking with me. This interaction has been fabulous. \n'
         'I got to know more about`#GET_BUS_NAME`and it was awesome! I hope you gained some new insights as well by answering my questions.'
         'Would you like a summary of what we talked about? `': {
-            '#IF($summary=yes) `Here\'s the summary. Thanks for using Leanna! \n`#GET_SUMMARY`': 'end',
-            '`Alright. Thanks for using Leanna! Please come back when you have more ideas. '
-            'Leanna can always pick up where we have left this time. `': {
-                'score': 0.2,
-                'state': 'end'
-            }
+            '#SET_YES_NO': {
+                '#IF($summary=yes) `there you go`': 'end',
+                '`Alright. `#GET_SUMMARY`Thanks for using Leanna! Please come back when you have more ideas. '
+                'Leanna can always pick up where we have left this time. `': {
+                    'score': 0.2,
+                    'state': 'end'
+                }
+            },
+            'error': 'end'
+        },
+        '`Thanks! Have a good one.`': {
+            'score': 0.2,
+            'state': 'end'
         }
     }
 
     transition_question = {
         'state': 'business_sub',
-        '#IF(VISIT=multi) #CHECK_TALK': {
+        '#IF($VISIT=multi) #CHECK_TALK': {
             'state': 'set_user_know',
             '#SET_USER_KNOW': {
                 '#IF($user_know=yes)': {
@@ -338,7 +345,7 @@ def visits() -> DialogueFlow:
             {V.large_cat.name: "product innovation", V.small_cat.name: "customer needs"},
             set_cat_name
         ),
-        'MOVE_ON': MacroGPTJSON_BS(
+        'MOVE_ON': MacroGPTJSON_BP(
             'Does the input sentence indicates that the user wants to move on to next topic? '
             'Please only return binary answer, yes or no',
             {V.moveon_choice.name: "yes"},
@@ -360,9 +367,10 @@ def visits() -> DialogueFlow:
             set_know
         ),
         'SET_YES_NO': MacroGPTJSON(
-            'Does the speaker wants an summary of what we have talked about? Return yes or no',
-            {V.summary.name: ["yes"]}, V.summary.name, True),
-        'SET_IDEA_EX': MacroGPTJSON_BP(
+            'That was the input sentence. Categorize the input sentence as either yes or no',
+            {V.summary.name: "yes"}, V.summary.name, True),
+
+        'SET_IDEA_EX': MacroGPTJSON_BUS(
             'Does the users want another example? Please only answer yes or no to this question. ',
             {V.ex_choice.name: "yes"},
             set_ex_idea
@@ -516,10 +524,14 @@ class MacroGPTJSON(Macro):
         examples = f'{self.full_ex} or {self.empty_ex} if unavailable' if self.empty_ex else self.full_ex
         prompt = f'{self.request} Respond in the JSON schema such as {examples}: {ngrams.raw_text().strip()}'
         output = gpt_completion(prompt)
-        if not output: return False
+        print(output)
+
+        if not output:
+            return False
 
         try:
             d = json.loads(output)
+            print(d)
         except JSONDecodeError:
             return False
         # print(d)
@@ -532,6 +544,8 @@ class MacroGPTJSON(Macro):
             vars[self.field] = ls[random.randrange(len(ls))]
         # print(self.field)
         # print(vars[self.field])
+
+        print(vars)
 
         return True
 
@@ -594,7 +608,6 @@ class MacroGetQuestion(Macro):
         if small_cat is None:
             return "Please provide a valid subsec."
 
-        # small_cat = small_cat.replace(" ", "")  # Remove spaces from the small_cat string
         question_text = None
 
         with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
@@ -609,7 +622,7 @@ class MacroGetQuestion(Macro):
 
 class MacroPrintResponses(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        user_responses = vars.get('user_responses', {})
+        user_responses = vars[vars['call_names']].get('user_responses', {})
         response_text = ""
 
         for small_cat, user_response in user_responses.items():
@@ -621,7 +634,8 @@ class MacroPrintResponses(Macro):
 class MacroUpdateResponses(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         small_cat = vars[vars['call_names']].get('small_cat')
-        ans_bp = vars[vars['call_names']].get('ans_bp')
+        print(small_cat)
+        ans_bp = vars.get('ans_bp')
 
         user_responses = vars[vars['call_names']].get('user_responses', {})
 
@@ -669,7 +683,6 @@ class MacroGetExample(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         small_cat = vars[vars['call_names']].get('small_cat')
 
-        small_cat = small_cat.replace(" ", "")  # Remove spaces from the small_cat string
         available_examples = []
 
         with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
@@ -760,6 +773,7 @@ class MacroGPTJSON_BUS_SETKNOW(Macro):
 
         try:
             d = json.loads(output)
+            print(d)
         except JSONDecodeError:
             print(f'Invalid: {output}')
             return False
@@ -767,10 +781,8 @@ class MacroGPTJSON_BUS_SETKNOW(Macro):
         if d is None:
             return False
 
-        if self.set_variables:
-            self.set_variables(vars[vars['call_names']], d)
-        else:
-            vars[vars['call_names']].update(d)
+        vars['user_know'] = d['user_know']
+        vars['ans_bp'] = d.get('ans_bp')
 
         return True
 
@@ -830,7 +842,6 @@ class MacroGPTJSON_BS(Macro):
         try:
             d = json.loads(output)
         except JSONDecodeError:
-            # print(f'Invalid: {output}')
             return False
 
         if d is None:
@@ -841,10 +852,7 @@ class MacroGPTJSON_BS(Macro):
         else:
             vars[vars['call_names']].update(d)
 
-        # print(vars[vars['call_names']]['small_cat'])
-        # print(d['small_cat'])
-
-        vars['bus_true'] = True
+        vars['bus_true'] = "True"
 
         if (d['small_cat'] is None or d['small_cat'] == "N/A" or d['small_cat'] == '') and d['large_cat'] is not None:
             user_responses = vars[vars['call_names']].get('user_responses', {})
@@ -915,8 +923,6 @@ def set_move_on(vars: Dict[str, Any], user: Dict[str, Any]):
 
 
 def set_cat_name(vars: Dict[str, Any], user: Dict[str, Any]):
-    # print(user[V.small_cat.name])
-    # print(vars[vars['call_names']][V.small_cat.name])
     vars[vars['call_names']][V.large_cat.name] = user[V.large_cat.name]
     vars[vars['call_names']][V.small_cat.name] = user[V.small_cat.name]
 
@@ -927,8 +933,7 @@ def set_yesno(vars: Dict[str, Any], user: Dict[str, Any]):
 
 def set_know(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[V.user_know.name] = user[V.user_know.name]
-    vars[vars['call_names']][V.ans_bp.name] = user[V.ans_bp.name]
-    print(vars[vars['call_names']][V.ans_bp.name])
+    vars[V.ans_bp.name] = user[V.ans_bp.name]
 
 
 def set_ex_idea(vars: Dict[str, Any], user: Dict[str, Any]):
