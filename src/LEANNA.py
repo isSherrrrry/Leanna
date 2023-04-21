@@ -177,7 +177,7 @@ def visits() -> DialogueFlow:
                                 }
                             },
                             'error': {
-                                '`Okay, do want to start with something else? '
+                                '`Okay, do you want to start with something else? '
                                 'We can talk about product innovation, customer relationships, '
                                 'and infrastructure management. '
                                 'You can always leave Leanna and come back later. '
