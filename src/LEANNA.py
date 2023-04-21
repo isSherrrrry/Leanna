@@ -17,8 +17,8 @@ import businesModel
 PATH_API_KEY = '../resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
 
-told_jokes = []
 
+told_jokes = []
 
 def visits() -> DialogueFlow:
     transition_visit = {
@@ -77,7 +77,6 @@ def visits() -> DialogueFlow:
                 '#IF($business=true) ` `': 'emobus',
                 '`OK please rest well. I\'m always here when you need me. '
                 'Come back when you are ready to talk about business. `': {
-                    'score': 0.1,
                     'state': 'end'
                 }
             }
@@ -85,7 +84,7 @@ def visits() -> DialogueFlow:
         '`I had a great time with some of my other chatbot friends last week, trading stories, macros, '
         'funny ChatGPT responses... My friends tell me I’m a really good listener! '
         'How would your friends describe you?`': {
-            'score': 0.5,
+            'score': 0.4,
             '#SET_BIG_FIVE': {
                 '#EMO_ADV': {
                     '#BUSINESS': {
@@ -106,10 +105,18 @@ def visits() -> DialogueFlow:
 
     transition_joke = {
         'state': 'joke',
+        '#IF($more_jokes=true) `Sure, here is another one. \n` #JOKE `\nDid you like the joke? Feeling better?`': {
+            'state': 'joke_next'
+        },
         '`Let me tell you something to brighten your day.\n` #JOKE `\nDid you like the joke? Feeling better?`': {
+            'state': 'joke_next',
+            'score': 0.4,
             '#JOKE_FEEL #SET_SENTIMENT': {
                 '#IF($joke_feel=yes) ` `': 'joke',
-                '#IF($sentiment=positive) ` `': 'business_start',
+                '#IF($sentiment=positive) ` `': {
+                    'score': 0.7,
+                    'state': 'business_start'
+                },
                 '` `': {
                     'state': 'personality',
                     'score': 0.5
@@ -352,7 +359,7 @@ def visits() -> DialogueFlow:
             set_yesno
         ),
         'SET_USER_KNOW': MacroGPTJSON_BUS_SETKNOW(
-            'Id the user\'s answer relavent to the question given? Provide binary answer, yes or no.'
+            'Is the user\'s answer relavent to the question given? Provide binary answer, yes or no.'
             'Please also provide the entire input as the next output. '
             'Phrase them into a json, with yes/no as the first element, and the input as the second;'
             'Only return the json file, please. thanks',
@@ -482,6 +489,7 @@ class MacroUser(Macro):
                                                               'I want to know how you are doing. Do you mind sharing with me how your week has been?'
         else:
             vars['VISIT'] = 'multi'
+            vars['more_jokes'] = 'false'
             if 'prev_adv' in vars[vars['call_names']]:
                 return 'Hi ' + vars[
                     'call_names'] + ', nice to see you again. Did you try the advice I gave you last time? How was it?'
@@ -575,10 +583,11 @@ class MacroDelAdv(Macro):
 class MacroJokes(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
         data = list(csv.reader(open('../resources/jokes.csv')))
-        index = random.randint(1, len(data))
+        index = random.randint(1, len(data)-1)
         while index in told_jokes:
-            index = random.randint(1, len(data))
+            index = random.randint(1, len(data)-1)
         told_jokes.append(index)
+        vars['more_jokes'] = 'true'
         return data[index][0]
 
 
