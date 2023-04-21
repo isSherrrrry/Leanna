@@ -17,8 +17,8 @@ import businesModel
 PATH_API_KEY = '../resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
 
-
 told_jokes = []
+
 
 def visits() -> DialogueFlow:
     transition_visit = {
@@ -28,7 +28,7 @@ def visits() -> DialogueFlow:
             '#SET_CALL_NAMES': {
                 '#USER_PROFILE': {
                     '#SET_SENTIMENT': {
-                        '#IF($sentiment=positive) #DEL_ADV `Wow, that sounds awesome! `': 'emobus',
+                        '#IF($sentiment=positive) #DEL_ADV ` `': 'emobus',
                         '#IF($sentiment=neutral) #DEL_ADV ` `': 'joke',
                         '#IF($sentiment=negative) ` `': 'personality',
                         '` `': {
@@ -46,27 +46,27 @@ def visits() -> DialogueFlow:
 
     transition_emobus = {
         'state': 'emobus',
-        '#IF($VISIT=multi) `How\'s your business model going so far?`': {
-            '#SET_BUS_EMO #SET_BIG_SAMLL_CATE': {
-                '#IF($sentiment=negative) `Sounds like you are having trouble with` #GET_SMALL_CAT `in` #GET_BIG_CAT `. '
-                'Would you like to work on that today?`': {
-                    '#SET_YES_NO': {
-                        '#IF($summary=yes)': 'business_sub',
-                        '`Okay, that\'s totally fine. `': {
-                            'score': 0.1,
-                            'state': 'business_start'
-                        }
-                    }
+        '#IF($VISIT=multi) `Hi, we were discussing your `#GET_BUS_NAME` in `#GET_INDU industry`. '
+        'Are you still on this business? If not, what business in what industry?`': {
+            '#SAME_BUS': {
+                '#IF($same_bus=new)': {
+                    '#DEL_PROFILE `Sorry to hear that, but I\'m really interested in your new business. '
+                    'What is its name?`': 'bus_name_indu'
                 },
-                '`Glad to hear that!`': {
-                    'score': 0.1,
-                    'state': 'business_start'
+                '#talked_sub': {
+                    'score': 0.4,
+                    'state': 'big_small_cat'
                 }
+            },
+            'error': {
+                '`sorry I don\'t understand you`': 'business_part'
             }
         },
         '`Could you tell me a little bit about your entrepreneurial journey so far?`': {
-            'score': 0.1,
-            'state': 'business_start'
+            'score': 0.4,
+            'error': {
+                '`Glad to hear that. Let me help you further your entrepreneurial journey`': 'business_start'
+            }
         }
     }
 
@@ -138,23 +138,6 @@ def visits() -> DialogueFlow:
 
     transition_business = {
         'state': 'business_start',
-        '#IF($VISIT=multi) `Hi, we were discussing your #GET_BUS_NAME in #GET_INDU industry. '
-        'Are you still on this business? If not, what business in what industry?`': {
-            '#SAME_BUS': {
-                '#IF($same_bus=new)': {
-                    '#DEL_PROFILE `Sorry to hear that, but I\'m really interested in your new business. '
-                    'What is its name?`': 'bus_name_indu'
-                },
-                '`#talked_sub`': {
-                    'score': 0.4,
-                    'state': 'big_small_cat'
-                }
-            },
-            'error': {
-                '`sorry I don\'t understand you`': 'business_part'
-            }
-        },
-
         '`I am so excited to talk to you about your business. \n'
         'What is its name and are you selling a product or a service? \n'
         'A product is something that people can use and is tangible. \n'
@@ -209,7 +192,7 @@ def visits() -> DialogueFlow:
         '#IF($bus_true=True) `Thank you so much for talking with me. This interaction has been fabulous. \n'
         'I got to know more about`#GET_BUS_NAME`and it was awesome! I hope you gained some new insights as well by answering my questions.'
         'Would you like a summary of what we talked about? `': {
-            '#SET_YES_NO': {
+            '#SET_YES_NO_S': {
                 '#IF($summary=yes) `there you go`': 'end',
                 '`Alright. `#GET_SUMMARY`Thanks for using Leanna! Please come back when you have more ideas. '
                 'Leanna can always pick up where we have left this time. `': {
@@ -373,10 +356,12 @@ def visits() -> DialogueFlow:
             {V.user_know.name: "yes", V.ans_bp.name: "here's the entire input"},
             set_know
         ),
-        'SET_YES_NO': MacroGPTJSON(
-            'That was the input sentence. Categorize the input sentence as either yes or no',
-            {V.summary.name: "yes"}, V.summary.name, True),
-
+        'SET_YES_NO_S': MacroGPTJSON(
+            'Does the user want a summary of the conversation. Categorize the input sentence as either yes or no',
+            {V.summary.name: ["yes"]}, V.summary.name, True),
+        'SET_YES_NO_E': MacroGPTJSON(
+            'Does the user want to work on his business plan today. Categorize the input sentence as either yes or no',
+            {V.work.name: ["yes"]}, V.work.name, True),
         'SET_IDEA_EX': MacroGPTJSON_BUS(
             'Does the users want another example? Please only answer yes or no to this question. ',
             {V.ex_choice.name: "yes"},
@@ -434,6 +419,7 @@ class V(Enum):
     summary = 14
     moveon_choice = 15
     same_bus = 16
+    work = 17
 
 
 def gpt_completion(input: str, regex: Pattern = None) -> str:
@@ -458,33 +444,46 @@ class MacroDelProfile(Macro):
 
 class MacroCheckTalk(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        talked_sub = vars[vars['call_names']].get('talked_subsecs')
+        talked_sub = None
+        if vars[vars['call_names']].get('user_responses'):
+            talked_sub = list(vars[vars['call_names']].get('user_responses').keys())
+        small_cat = vars[vars['call_names']].get('small_cat')
+        question_text = None
+        with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row['subsec'] == small_cat:
+                    question_text = row['Question']
+                    break
+
         if talked_sub is not None:
-            if vars[vars['call_names']].get('get_small_cat') in talked_sub:
-                prev_plan = vars[vars['call_names']]['user_responses'][vars['get_small_cat']]
-                str = 'I asked you about' + vars['SELECTED_QUESTION'] + 'last time and your ' \
-                                                                        'previous plan is ' + prev_plan + '. ' + 'What do you think about it now?'
+            if small_cat in talked_sub:
+                prev_plan = vars[vars['call_names']]['user_responses'].get(small_cat)
+                str = 'I asked you about' + question_text + 'last time and your ' \
+                            'previous plan was ' + prev_plan + '. ' + 'What do you think about it now?'
                 return str
             else:
-                small_cat = vars[vars['call_names']].get('get_small_cat')
-                big_cat = vars[vars['call_names']].get('get_big_cat')
-                str = 'We are going to brainstorm' + small_cat + 'under' + big_cat + 'category' + \
-                      'let\'s think about this question: ' + vars['SELECTED_QUESTION']
+
+                str = 'let\'s think about this question: ' + question_text
+
                 return str
 
 
 class MacroTalkedSub(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        talked_sub = vars[vars['call_names']]['talked_subsecs']
+        talked_sub = list(vars[vars['call_names']].get('user_responses').keys())
         str = ''
         for i in range(len(talked_sub)):
             str += talked_sub[i] + ', '
 
+        last_topic = vars[vars['call_names']].get('small_cat')
+
         if talked_sub == '':
             return 'It was nice to meet you but we did not get to any of the business element during our last ' \
                    'conversation. Is there a particular problem area you would like to brainstorm about'
-        return 'Last time we talked about ' + str + ' categories. Do you want to revisit any of the previous topic ' \
-                                                    'or you would to talk a new one'
+        return 'Last time we talked about ' + str + 'And we left off with ' + last_topic + '. ' \
+                                                                                           'How is going with ' + last_topic + '? Do you want to revisit any of the previous ' \
+                                                                                                                               'topic or you would to talk a new one'
 
 
 class MacroUser(Macro):
@@ -597,9 +596,9 @@ class MacroDelAdv(Macro):
 class MacroJokes(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
         data = list(csv.reader(open('../resources/jokes.csv')))
-        index = random.randint(1, len(data)-1)
+        index = random.randint(1, len(data) - 1)
         while index in told_jokes:
-            index = random.randint(1, len(data)-1)
+            index = random.randint(1, len(data) - 1)
         told_jokes.append(index)
         vars['more_jokes'] = 'true'
         return data[index][0]
@@ -906,7 +905,7 @@ def get_bus_name(vars: Dict[str, Any]):
 
 
 def get_industry(vars: Dict[str, Any]):
-    ls = vars[vars['call_names']][V.industry.name]
+    ls = vars[vars['call_names']].get(V.industry.name)
     return ls
 
 
@@ -923,9 +922,6 @@ def get_small_cat(vars: Dict[str, Any]):
 def set_bus_name(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[vars['call_names']][V.business_name.name] = user[V.business_name.name]
     vars[vars['call_names']][V.industry.name] = user[V.industry.name]
-    print("hello")
-    print(vars[vars['call_names']][V.industry.name])
-
 
 def set_move_on(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[vars['call_names']][V.moveon_choice.name] = user[V.moveon_choice.name]
