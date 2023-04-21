@@ -578,8 +578,9 @@ class MacroGetQuestion(Macro):
         if small_cat is None:
             return "Please provide a valid subsec."
 
-        small_cat = small_cat.replace(" ", "")  # Remove spaces from the small_cat string
+        # small_cat = small_cat.replace(" ", "")  # Remove spaces from the small_cat string
         question_text = None
+
 
         with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
@@ -789,6 +790,9 @@ class MacroGPTJSON_BS(Macro):
         else:
             vars[vars['call_names']].update(d)
 
+        # print(vars[vars['call_names']]['small_cat'])
+        # print(d['small_cat'])
+
         vars['bus_true'] = True
 
         if (d['small_cat'] is None or d['small_cat'] == "N/A") and d['large_cat'] is not None:
@@ -808,6 +812,8 @@ class MacroGPTJSON_BS(Macro):
             available_subsecs = list(set(all_subsecs) - talked_subsecs)
 
             chosen_subsec = random.choice(available_subsecs) if available_subsecs else None
+
+            # print(chosen_subsec)
 
             vars[vars['call_names']][V.small_cat.name] = chosen_subsec
 
@@ -855,6 +861,8 @@ def set_bus_name(vars: Dict[str, Any], user: Dict[str, Any]):
 
 
 def set_cat_name(vars: Dict[str, Any], user: Dict[str, Any]):
+    # print(user[V.small_cat.name])
+    # print(vars[vars['call_names']][V.small_cat.name])
     vars[vars['call_names']][V.large_cat.name] = user[V.large_cat.name]
     vars[vars['call_names']][V.small_cat.name] = user[V.small_cat.name]
 
