@@ -19,7 +19,7 @@ openai.api_key_path = PATH_API_KEY
 
 told_jokes = []
 
-#fix dialogue - jessie
+
 def visits() -> DialogueFlow:
     transition_visit = {
         'state': 'start',
@@ -28,8 +28,8 @@ def visits() -> DialogueFlow:
             '#SET_CALL_NAMES': {
                 '#USER_PROFILE': {
                     '#SET_SENTIMENT': {
-                        '#IF($sentiment=positive) `Wow, that sounds awesome! `': 'business_start',
-                        '#IF($sentiment=neutral) ` `': 'joke',
+                        '#IF($sentiment=positive) #DEL_ADV `Wow, that sounds awesome! `': 'emobus',
+                        '#IF($sentiment=neutral) #DEL_ADV ` `': 'joke',
                         '#IF($sentiment=negative) ` `': 'personality',
                         '` `': {
                             'state': 'business_start',
@@ -41,7 +41,32 @@ def visits() -> DialogueFlow:
             'error': {
                 '`Sorry`': 'start'
             }
+        }
+    }
 
+    transition_emobus = {
+        'state': 'emobus',
+        '#IF($VISIT=multi) `How\'s your business model going so far?`': {
+            '#SET_BUS_EMO #SET_BIG_SAMLL_CATE': {
+                '#IF($sentiment=negative) `Sounds like you are having trouble with` #GET_SMALL_CAT `in` #GET_BIG_CAT `. '
+                'Would you like to work on that today?`': {
+                    '#SET_YES_NO': {
+                        '#IF($summary=yes)': 'business_sub',
+                        '`Okay, that\'s totally fine. `': {
+                            'score': 0.1,
+                            'state': 'business_start'
+                        }
+                    }
+                },
+                '`Glad to hear that!`': {
+                    'score': 0.1,
+                    'state': 'business_start'
+                }
+            }
+        },
+        '`Could you tell me a little bit about your entrepreneurial journey so far?`': {
+            'score': 0.1,
+            'state': 'end'
         }
     }
 
@@ -49,7 +74,7 @@ def visits() -> DialogueFlow:
         'state': 'personality',
         '#IF($VISIT=multi) #EMO_ADV': {
             '#BUSINESS': {
-                '#IF($business=true) ` `': 'business_start',
+                '#IF($business=true) ` `': 'emobus',
                 '`OK please rest well. I\'m always here when you need me. '
                 'Come back when you are ready to talk about business. `': {
                     'score': 0.1,
@@ -106,16 +131,33 @@ def visits() -> DialogueFlow:
 
     transition_business = {
         'state': 'business_start',
+        '#IF($VISIT=multi) `Hi, we were discussing your #GET_BUS_NAME in #GET_INDU industry. '
+        'Are you still on this business? If not, what business in what industry?`': {
+            '#SAME_BUS': {
+                '#IF($same_bus=new)': {
+                    '#DEL_PROFILE `Sorry to hear that, but I\'m really interested in your new business. '
+                    'What is its name?`': 'bus_name_indu'
+                },
+                '`#talked_sub`': {
+                    'score': 0.4,
+                    'state': 'big_small_cat'
+                }
+            },
+            'error': {
+                '`sorry I don\'t understand you`': 'business_part'
+            }
+        },
         '`I am so excited to talk to you about your business. \n'
         'What is its name and are you selling a product or a service? \n'
         'A product is something that people can use and is tangible. \n'
         'Think of a computer or software such as google drive. \n'
         'A service is something you can provide or perform for another person. \n'
         'For example, a hair salon or a restaurant service. And what industry is your business in?`': {
+            'score': 0.4,
             'state': 'bus_name_indu',
             '#SET_BUS_NAME': {
                 '`Thanks for letting me know! That sounds super exciting. \n'
-                '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`company. \n'
+                '#GET_BUS_NAME `is sure to change the world one day as a fantastic`#GET_INDU`company. \n'
                 'My role is to help you brainstorm on fuzzy ideas of your business so that you \n'
                 'can have a tangible pitch by the end of our conversation. \n'
                 'Is there a particular problem area you would like to brainstorm about first?`': {
@@ -135,7 +177,7 @@ def visits() -> DialogueFlow:
                                 }
                             },
                             'error': {
-                                '`Okay, do want to start with something else? '
+                                '`Okay, do you want to start with something else? '
                                 'We can talk about product innovation, customer relationships, '
                                 'and infrastructure management. '
                                 'You can always leave Leanna and come back later. '
@@ -171,8 +213,24 @@ def visits() -> DialogueFlow:
 
     transition_question = {
         'state': 'business_sub',
+        '#IF(VISIT=multi) #CHECK_TALK': {
+            'state': 'set_user_know',
+            '#SET_USER_KNOW': {
+                '#IF($user_know=yes)': {
+                    'state': 'business_pos'
+                },
+                '` `': {
+                    'state': 'business_neg',
+                    'score': 0.2
+                }
+            },
+            'error': {
+                '`Cool. Can you elaborate more on the plan please? `': 'set_user_know'
+            }
+        },
         '`We are going to brainstorm`#GET_SMALL_CAT`under`#GET_BIG_CAT`category. \n'
         'Let\'s think about this question prompt to get your creative juices flowing:\n`#GET_QUESTION` `': {
+            'score': 0.4,
             'state': 'set_user_know',
             '#SET_USER_KNOW': {
                 '#IF($user_know=yes)': {
@@ -199,7 +257,6 @@ def visits() -> DialogueFlow:
             'score': 0.2
         }
     }
-
     transition_negative = {
         'state': 'business_neg',
         '#GET_EXAMPLE': {
@@ -251,6 +308,7 @@ def visits() -> DialogueFlow:
             'open, conscience, extroversion, introversion, agreeable, and neurotic.',
             {V.big_five.name: ["open", "conscience", "extroversion"]}, V.big_five.name, False),
         'EMO_ADV': MacroEmotion(),
+        'DEL_ADV': MacroDelAdv(),
         'BUSINESS': MacroGPTJSON(
             'This is a response to the question of whether the speaker want to relax or talk about business.'
             'Analyze the speaker\'s desired action and categorize it into true or false: '
@@ -259,6 +317,9 @@ def visits() -> DialogueFlow:
         'JOKE_FEEL': MacroGPTJSON(
             'Is the user requesting more jokes? Answer in yes or no',
             {V.joke_feel.name: ["yes"]}, V.joke_feel.name, True),
+        'SET_BUS_EMO': MacroGPTJSON(
+            'Categorize speaker\'s response based on if he is struggling. Positive for no trouble and negative for having trouble.',
+            {V.sentiment.name: ["positive"]}, V.sentiment.name, True),
         'SET_BUS_NAME': MacroGPTJSON_BUS(
             'Please find the person\'s business name and the industry',
             {V.business_name.name: "Microsoft", V.industry.name: "technology"},
@@ -284,7 +345,9 @@ def visits() -> DialogueFlow:
             set_move_on
         ),
         'SET_YES_NO_Topic': MacroGPTJSON_BUS(
-            'Is the user\'s sentiment positive? Please only provide yes or no to this question.',
+            'Please find out if the speaker\'s feeling about this topic.'
+            'If the speaker thinks the topic is good or wants to discuss it, please only return yes.'
+            'If the speaker wants a new topic or does not like this topic, please only return no',
             {V.sounds_yesno.name: "yes"},
             set_yesno
         ),
@@ -298,12 +361,19 @@ def visits() -> DialogueFlow:
         ),
         'SET_YES_NO': MacroGPTJSON(
             'Does the speaker wants an summary of what we have talked about? Return yes or no',
-            {V.summary.name: "yes"}, V.summary.name, True),
+            {V.summary.name: ["yes"]}, V.summary.name, True),
         'SET_IDEA_EX': MacroGPTJSON_BP(
             'Does the users want another example? Please only answer yes or no to this question. ',
             {V.ex_choice.name: "yes"},
             set_ex_idea
         ),
+        'SAME_BUS': MacroGPTJSON(
+            'Does the speaker still work on the same business as before or the speaker has started a new business? '
+            'Return same or new',
+            {V.same_bus.name: ["same"]}, V.same_bus.name, True),
+        'CHECK_TALK': MacroCheckTalk(),
+        'DEL_PROFILE': MacroDelProfile(),
+        'talked_sub': MacroTalkedSub(),
         'GET_BUS_NAME': MacroNLG(get_bus_name),
         'GET_INDU': MacroNLG(get_industry),
         'GET_BIG_CAT': MacroNLG(get_big_cat),
@@ -312,12 +382,13 @@ def visits() -> DialogueFlow:
         'GET_EXAMPLE': MacroGetExample(),
         'GET_AVAIL_CATE': MacroGetAvailCat(),
         'UPDATE_BP': MacroUpdateResponses(),
-        'GET_SUMMARY': MacroPrintResponses()
-        # 'SAVE_BUS_NAME': MacroSave('business_name')
+        'GET_SUMMARY': MacroPrintResponses(),
+        'SAVE_BUS_NAME': MacroSave('business_name')
     }
 
     df = DialogueFlow('start', end_state='end')
     df.load_transitions(transition_visit)
+    df.load_transitions(transition_emobus)
     df.load_transitions(transition_personality)
     df.load_transitions(transition_joke)
     df.load_global_nlu(global_transition)
@@ -347,6 +418,7 @@ class V(Enum):
     ex_bp = 13
     summary = 14
     moveon_choice = 15
+    same_bus = 16
 
 
 def gpt_completion(input: str, regex: Pattern = None) -> str:
@@ -363,27 +435,70 @@ def gpt_completion(input: str, regex: Pattern = None) -> str:
     return output
 
 
+class MacroDelProfile(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        del vars[vars['call_names']]['talked_subsecs']
+        del vars[vars['call_names']]['user_responses']
+
+
+class MacroCheckTalk(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        talked_sub = vars[vars['call_names']].get('talked_subsecs')
+        if talked_sub is not None:
+            if vars[vars['call_names']].get('get_small_cat') in talked_sub:
+                prev_plan = vars[vars['call_names']]['user_responses'][vars['get_small_cat']]
+                str = 'I asked you about' + vars['SELECTED_QUESTION'] + 'last time and your ' \
+                                                                        'previous plan is ' + prev_plan + '. ' + 'What do you think about it now?'
+                return str
+            else:
+                small_cat = vars[vars['call_names']].get('get_small_cat')
+                big_cat = vars[vars['call_names']].get('get_big_cat')
+                str = 'We are going to brainstorm' + small_cat + 'under' + big_cat + 'category' + \
+                      'let\'s think about this question: ' + vars['SELECTED_QUESTION']
+                return str
+
+
+class MacroTalkedSub(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        talked_sub = vars[vars['call_names']]['talked_subsecs']
+        str = ''
+        for i in range(len(talked_sub)):
+            str += talked_sub[i] + ', '
+
+        if talked_sub == '':
+            return 'It was nice to meet you but we did not get to any of the business element during our last ' \
+                   'conversation. Is there a particular problem area you would like to brainstorm about'
+        return 'Last time we talked about ' + str + ' categories. Do you want to revisit any of the previous topic ' \
+                                                    'or you would to talk a new one'
+
+
 class MacroUser(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         name = vars['call_names'].lower()
         if name not in vars:
+            vars['VISIT'] = 'first'
             vars[name] = {}
             return 'Nice to meet you ' + vars['call_names'] + '. Before we dive into business, ' \
-                    'I want to know how you are doing. Do you mind sharing with me how your week has been?'
+                                                              'I want to know how you are doing. Do you mind sharing with me how your week has been?'
         else:
             vars['VISIT'] = 'multi'
-            return 'Hi ' + vars['call_names'] + ', nice to see you again. How\'s your weekend?'
+            if 'prev_adv' in vars[vars['call_names']]:
+                return 'Hi ' + vars[
+                    'call_names'] + ', nice to see you again. Did you try the advice I gave you last time? How was it?'
+            else:
+                return 'Hi ' + vars['call_names'] + ', nice to see you again. How\'s your weekend?'
+
 
 class MacroSave(Macro):
     def __init__(self, new_stuff):
         self.save = new_stuff
+
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         name = vars['call_names'].lower()
         if name not in vars:
             vars[name] = {}
-        vars[name].update({self.save: vars[self.save]})
+        vars[name].update({self.save: vars[vars['call_names']][self.save]})
         # print(vars[name][self.save])
-
 
 
 class MacroGPTJSON(Macro):
@@ -439,11 +554,23 @@ class MacroEmotion(Macro):
             personality = 'agreeable'
 
         if personality:
-            return emo_dict[personality][random.randrange(3)] + 'Also, relax, I know doing a start-up could be hard. ' \
-                                                            'That\'s the reason why I was created to help. Do you feel like working on your business idea today?' \
-                                                            ' Or you rather relax?'
+            adv = emo_dict[personality][random.randrange(3)]
+            if 'prev_adv' in vars[vars['call_names']]:
+                while vars[vars['call_names']]['prev_adv'] == adv:
+                    adv = emo_dict[personality][random.randrange(3)]
+            vars[vars['call_names']]['prev_adv'] = adv
+            return adv + 'Also, relax, I know doing a start-up could be hard. ' \
+                         'That\'s the reason why I was created to help. Do you feel like working on your business idea today?' \
+                         ' Or you rather relax?'
         else:
             return
+
+
+class MacroDelAdv(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        if 'prev_adv' in vars[vars['call_names']]:
+            vars[vars['call_names']]['prev_adv'] = None
+
 
 class MacroJokes(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
@@ -467,6 +594,7 @@ class MacroGetQuestion(Macro):
         if small_cat is None:
             return "Please provide a valid subsec."
 
+        # small_cat = small_cat.replace(" ", "")  # Remove spaces from the small_cat string
         question_text = None
 
         with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
@@ -496,7 +624,6 @@ class MacroUpdateResponses(Macro):
         ans_bp = vars[vars['call_names']].get('ans_bp')
 
         user_responses = vars[vars['call_names']].get('user_responses', {})
-        print(user_responses)
 
         if small_cat and ans_bp:
             user_responses[small_cat] = ans_bp
@@ -537,10 +664,12 @@ class MacroGetAvailCat(Macro):
 
         return f"I can start you with {chosen_large_cat} in the {chosen_subsec}"
 
+
 class MacroGetExample(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         small_cat = vars[vars['call_names']].get('small_cat')
 
+        small_cat = small_cat.replace(" ", "")  # Remove spaces from the small_cat string
         available_examples = []
 
         with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
@@ -573,7 +702,7 @@ class MacroGetExample(Macro):
             return 'Here is an ' + vars[vars['call_names']]['small_cat'] + ' example that might help you \n' + \
                 selected_example + '\n Do you want another example, move on, or to update your business plan now?'
         else:
-            return 'Here is an ' + vars[vars['call_names']]['small_cat'] + 'example that might help you \n' + \
+            return 'Here is an ' + vars[vars['call_names']]['small_cat'] + ' example that might help you \n' + \
                 selected_example + '\n Do you want another example, move on, or to update your business plan now?'
 
 
@@ -646,7 +775,6 @@ class MacroGPTJSON_BUS_SETKNOW(Macro):
         return True
 
 
-
 class MacroGPTJSON_BP(Macro):
     def __init__(self, request: str, full_ex: Dict[str, Any], field: str, empty_ex: Dict[str, Any] = None,
                  set_variables: Callable[[Dict[str, Any], Dict[str, Any]], None] = None):
@@ -713,6 +841,9 @@ class MacroGPTJSON_BS(Macro):
         else:
             vars[vars['call_names']].update(d)
 
+        # print(vars[vars['call_names']]['small_cat'])
+        # print(d['small_cat'])
+
         vars['bus_true'] = True
 
         if (d['small_cat'] is None or d['small_cat'] == "N/A" or d['small_cat'] == '') and d['large_cat'] is not None:
@@ -733,7 +864,11 @@ class MacroGPTJSON_BS(Macro):
 
             chosen_subsec = random.choice(available_subsecs) if available_subsecs else None
 
+            # print(chosen_subsec)
+
             vars[vars['call_names']][V.small_cat.name] = chosen_subsec
+
+            vars[vars['call_names']]['talked_subsecs'] = talked_subsecs
 
         return True
 
@@ -747,11 +882,10 @@ class MacroNLG(Macro):
 
 
 def get_bus_name(vars: Dict[str, Any]):
-    ls = vars[vars['call_names']][V.business_name.name]
+    ls = vars[vars['call_names']].get(V.business_name.name)
     if ls is not None:
         return ls
     return "Your business"
-
 
 
 def get_industry(vars: Dict[str, Any]):
@@ -772,11 +906,17 @@ def get_small_cat(vars: Dict[str, Any]):
 def set_bus_name(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[vars['call_names']][V.business_name.name] = user[V.business_name.name]
     vars[vars['call_names']][V.industry.name] = user[V.industry.name]
+    print("hello")
+    print(vars[vars['call_names']][V.industry.name])
+
 
 def set_move_on(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[vars['call_names']][V.moveon_choice.name] = user[V.moveon_choice.name]
 
+
 def set_cat_name(vars: Dict[str, Any], user: Dict[str, Any]):
+    # print(user[V.small_cat.name])
+    # print(vars[vars['call_names']][V.small_cat.name])
     vars[vars['call_names']][V.large_cat.name] = user[V.large_cat.name]
     vars[vars['call_names']][V.small_cat.name] = user[V.small_cat.name]
 
@@ -793,6 +933,8 @@ def set_know(vars: Dict[str, Any], user: Dict[str, Any]):
 
 def set_ex_idea(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[vars['call_names']][V.ex_choice.name] = user[V.ex_choice.name]
+    vars[vars['call_names']][V.ex_bp.name] = user[V.ex_bp.name]
+
 
 def save(df: DialogueFlow, varfile: str):
     d = {k: v for k, v in df.vars().items() if not k.startswith('_')}
@@ -801,6 +943,8 @@ def save(df: DialogueFlow, varfile: str):
 
 def load(df: DialogueFlow, varfile: str):
     d = pickle.load(open(varfile, 'rb'))
+    d['call_names'] = None
+    d['VISIT'] = None
     df.vars().update(d)
     df.run()
     save(df, varfile)
