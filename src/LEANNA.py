@@ -193,9 +193,9 @@ def visits() -> DialogueFlow:
         'I got to know more about`#GET_BUS_NAME`and it was awesome! I hope you gained some new insights as well by answering my questions.'
         'Would you like a summary of what we talked about? `': {
             '#SET_YES_NO_S': {
-                '#IF($summary=yes) `there you go`': 'end',
-                '`Alright. `#GET_SUMMARY`Thanks for using Leanna! Please come back when you have more ideas. '
-                'Leanna can always pick up where we have left this time. `': {
+                '#IF($summary=yes) `there you go \n` #GET_SUMMARY': 'end',
+                '`Alright. Thanks for using Leanna! Please come back when you have more ideas. '
+                'Leanna can always pick up where we have left this time.`': {
                     'score': 0.2,
                     'state': 'end'
                 }
