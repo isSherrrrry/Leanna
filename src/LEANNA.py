@@ -299,7 +299,7 @@ def visits() -> DialogueFlow:
             'open, conscience, extroversion, introversion, agreeable, and neurotic.',
             {V.big_five.name: ["open", "conscience", "extroversion"]}, V.big_five.name, False),
         'EMO_ADV': MacroEmotion(),
-        'DEL_ADV': MacroDelAdv,
+        'DEL_ADV': MacroDelAdv(),
         'BUSINESS': MacroGPTJSON(
             'This is a response to the question of whether the speaker want to relax or talk about business.'
             'Analyze the speaker\'s desired action and categorize it into true or false: '
