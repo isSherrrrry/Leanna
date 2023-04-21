@@ -459,8 +459,8 @@ class MacroCheckTalk(Macro):
         if talked_sub is not None:
             if small_cat in talked_sub:
                 prev_plan = vars[vars['call_names']]['user_responses'].get(small_cat)
-                str = 'I asked you about' + question_text + 'last time and your ' \
-                            'previous plan was ' + prev_plan + '. ' + 'What do you think about it now?'
+                str = 'I asked you about \n' + question_text + '\n and your ' \
+                            'previous plan was \n' + prev_plan + '. ' + '\n What do you think about it now?'
                 return str
             else:
 
@@ -482,8 +482,8 @@ class MacroTalkedSub(Macro):
             return 'It was nice to meet you but we did not get to any of the business element during our last ' \
                    'conversation. Is there a particular problem area you would like to brainstorm about'
         return 'Last time we talked about ' + str + 'And we left off with ' + last_topic + '. ' \
-                                                                                           'How is going with ' + last_topic + '? Do you want to revisit any of the previous ' \
-                                                                                                                               'topic or you would to talk a new one'
+                'How is going with ' + last_topic + '? Do you want to revisit any of the previous ' \
+                'topic or what topic you want to talk about today?'
 
 
 class MacroUser(Macro):
