@@ -12,13 +12,13 @@ import time
 import re
 import openai
 import regexutils
-import businesModel
 
 PATH_API_KEY = '../resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
 
 told_jokes = []
 talked_sub = []
+
 
 
 def visits() -> DialogueFlow:
@@ -194,7 +194,7 @@ def visits() -> DialogueFlow:
         'I got to know more about`#GET_BUS_NAME`and it was awesome! I hope you gained some new insights as well by answering my questions.'
         'Would you like a summary of what we talked about? `': {
             '#SET_YES_NO_S': {
-                '#IF($summary=yes) `there you go \n` #GET_SUMMARY': 'end',
+                '#IF($summary=yes) `Here\'s your summary \n `#GET_SUMMARY` Thank you!`': 'end',
                 '`Alright. Thanks for using Leanna! Please come back when you have more ideas. '
                 'Leanna can always pick up where we have left this time.`': {
                     'score': 0.2,
@@ -263,20 +263,18 @@ def visits() -> DialogueFlow:
                     'state': 'business_neg',
                     'score': 0.2
                 },
-                '#IF($ex_choice=no)': {
-                    'score': 0.2,
-                    '`Of course. Do you want to update what you just thought about the business for this questions? '
+                '#IF($ex_choice=no) `Of course. Do you want to update what you just thought about the business for this questions? '
                     'If so, please present me your business plan here. Or we can move on to the next topic.`': {
-                        '#MOVE_ON': {
-                            '#IF($moveon_choice=yes)': {
-                                '`Sure. Let\'s move on to the next topic. What topics do you want to discuss next? '
-                                'We can brainstorm about product innovation, '
-                                'customer relationships, and infrastructure management. Topics left:` #GET_PROG': 'big_small_cat'
-                            },
-                            'error': {
-                                'state': 'business_pos',
-                                'score': 0.1
-                            }
+                    'score': 0.2,
+                    '#MOVE_ON': {
+                        '#IF($moveon_choice=yes)': {
+                            '`Sure. Let\'s move on to the next topic. What topics do you want to discuss next? '
+                            'We can brainstorm about product innovation, '
+                            'customer relationships, and infrastructure management. ` #UPDATE_BP': 'big_small_cat'
+                        },
+                        'error': {
+                            'state': 'business_pos',
+                            'score': 0.1
                         }
                     }
                 },
@@ -326,7 +324,7 @@ def visits() -> DialogueFlow:
         ),
         'SET_BIG_SAMLL_CATE': MacroGPTJSON_BS(
             'Please classify the input sentence into the following three large categories '
-            'and the corresponding small category within each large category: '
+            'and the corresponding small category within each large category. If small catgeory does not exist, leave it blank: '
             'product innovation (includes customer needs, customer fears, customer wants, '
             'product benefits, product features, product experiences, and value proposition), '
             'customer relationship (includes before purchase, during purchase, after purchase, '
@@ -364,16 +362,13 @@ def visits() -> DialogueFlow:
         'SET_YES_NO_E': MacroGPTJSON(
             'Does the user want to work on his business plan today. Categorize the input sentence as either yes or no',
             {V.work.name: ["yes"]}, V.work.name, True),
-        'SET_IDEA_EX': MacroGPTJSON_BUS(
-            'Does the users want another example? Please only answer yes or no to this question. ',
-            {V.ex_choice.name: "yes"},
-            set_ex_idea
-        ),
+        'SET_IDEA_EX': MacroGPTJSON(
+            'Does the users want another example? Categorize the input sentence as either yes or no',
+            {V.ex_choice.name: ["yes"]}, V.ex_choice.name, True),
         'SAME_BUS': MacroGPTJSON(
             'Does the speaker still work on the same business as before or the speaker has started a new business? '
             'Return same or new',
             {V.same_bus.name: ["same"]}, V.same_bus.name, True),
-        'GET_PROG': MacroGetProg(),
         'CHECK_TALK': MacroCheckTalk(),
         'DEL_PROFILE': MacroDelProfile(),
         'talked_sub': MacroTalkedSub(),
@@ -532,7 +527,6 @@ class MacroSave(Macro):
         if name not in vars:
             vars[name] = {}
         vars[name].update({self.save: vars[vars['call_names']][self.save]})
-        # print(vars[name][self.save])
 
 
 class MacroGPTJSON(Macro):
@@ -550,17 +544,14 @@ class MacroGPTJSON(Macro):
         examples = f'{self.full_ex} or {self.empty_ex} if unavailable' if self.empty_ex else self.full_ex
         prompt = f'{self.request} Respond in the JSON schema such as {examples}: {ngrams.raw_text().strip()}'
         output = gpt_completion(prompt)
-        print(output)
 
         if not output:
             return False
 
         try:
             d = json.loads(output)
-            print(d)
         except JSONDecodeError:
             return False
-        # print(d)
         if self.set_variables:
             self.set_variables(vars, d)
         else:
@@ -568,10 +559,6 @@ class MacroGPTJSON(Macro):
         if self.direct:
             ls = vars[self.field]
             vars[self.field] = ls[random.randrange(len(ls))]
-        # print(self.field)
-        # print(vars[self.field])
-
-        print(vars)
 
         return True
 
@@ -653,15 +640,16 @@ class MacroPrintResponses(Macro):
         response_text = ""
 
         for small_cat, user_response in user_responses.items():
-            response_text += f"{small_cat}: {user_response}\n\n"
+            if user_response is not None:
+                response_text += f"{small_cat}: {user_response}\n\n"
 
         return response_text.strip()
+
 
 
 class MacroUpdateResponses(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         small_cat = vars[vars['call_names']].get('small_cat')
-        print(small_cat)
         ans_bp = vars.get('ans_bp')
 
         user_responses = vars[vars['call_names']].get('user_responses', {})
@@ -730,20 +718,10 @@ class MacroGetExample(Macro):
 
         selected_example = remaining_examples[0]  # Select the first remaining example
         used_examples.append(selected_example)
-        vars[used_examples_key] = used_examples
+        vars[vars['call_names']][used_examples_key] = used_examples
 
-        user_responses = vars.get('user_responses', {})
-
-        if len(user_responses) != 0:
-            if user_responses:
-                encourage = random.choice(list(user_responses.keys()))
-            else:
-                encourage = ''
-            return 'Here is an ' + vars[vars['call_names']]['small_cat'] + ' example that might help you \n' + \
-                selected_example + '\n Do you want another example, move on, or try to answer the question again?'
-        else:
-            return 'Here is an ' + vars[vars['call_names']]['small_cat'] + ' example that might help you \n' + \
-                selected_example + '\n Do you want another example, move on, or try to answer the question again?'
+        return 'Here is an ' + vars[vars['call_names']]['small_cat'] + ' example that might help you \n' + \
+                selected_example + '\n Do you want another example?'
 
 
 class MacroGPTJSON_BUS(Macro):
@@ -760,12 +738,12 @@ class MacroGPTJSON_BUS(Macro):
         examples = f'{self.full_ex} or {self.empty_ex} if unavailable' if self.empty_ex else self.full_ex
         prompt = f'{self.request} Respond in the JSON schema such as {examples}: {ngrams.raw_text().strip()}'
         output = gpt_completion(prompt)
+        print(output)
         if not output: return False
 
         try:
             d = json.loads(output)
         except JSONDecodeError:
-            print(f'Invalid: {output}')
             return False
 
         if d is None:
@@ -800,7 +778,6 @@ class MacroGPTJSON_BUS_SETKNOW(Macro):
 
         try:
             d = json.loads(output)
-            print(d)
         except JSONDecodeError:
             print(f'Invalid: {output}')
             return False
@@ -951,7 +928,7 @@ def set_bus_name(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[vars['call_names']][V.industry.name] = user[V.industry.name]
 
 def set_move_on(vars: Dict[str, Any], user: Dict[str, Any]):
-    vars[vars['call_names']][V.moveon_choice.name] = user[V.moveon_choice.name]
+    vars[V.moveon_choice.name] = user[V.moveon_choice.name]
 
 
 def set_cat_name(vars: Dict[str, Any], user: Dict[str, Any]):
@@ -969,8 +946,7 @@ def set_know(vars: Dict[str, Any], user: Dict[str, Any]):
 
 
 def set_ex_idea(vars: Dict[str, Any], user: Dict[str, Any]):
-    vars[vars['call_names']][V.ex_choice.name] = user[V.ex_choice.name]
-    vars[vars['call_names']][V.ex_bp.name] = user[V.ex_bp.name]
+    vars[V.ex_choice.name] = user[V.ex_choice.name]
 
 
 def save(df: DialogueFlow, varfile: str):
