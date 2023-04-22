@@ -18,6 +18,7 @@ PATH_API_KEY = '../resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
 
 told_jokes = []
+talked_sub = []
 
 
 def visits() -> DialogueFlow:
@@ -154,7 +155,7 @@ def visits() -> DialogueFlow:
                 'Is there a particular problem area you would like to brainstorm about first?`': {
                     'state': 'big_small_cat',
                     '#SET_BIG_SAMLL_CATE': {
-                        '`Cool! Let\'s talk about`#GET_SMALL_CAT`in`#GET_BIG_CAT`category!`': 'business_sub'
+                        '` `': 'business_sub'
                     },
                     'error': {
                         '`Cool!`#GET_AVAIL_CATE` Do you want to start with this topic?`': {
@@ -249,7 +250,7 @@ def visits() -> DialogueFlow:
         '#IF($all) `Thanks, I have recorded it to the our meeting notes.` #UPDATE_BP': 'business_end',
         '`Thanks, I have recorded it to the meeting notes. What do you want to talk about next under '
         'the big brainstorm umbrellas of product innovation, customer relationships, '
-        'and infrastructure managment?` #UPDATE_BP': {
+        'and infrastructure managment? Left topics` #GET_PROG #UPDATE_BP': {
             'state': 'big_small_cat',
             'score': 0.2
         }
@@ -270,7 +271,7 @@ def visits() -> DialogueFlow:
                             '#IF($moveon_choice=yes)': {
                                 '`Sure. Let\'s move on to the next topic. What topics do you want to discuss next? '
                                 'We can brainstorm about product innovation, '
-                                'customer relationships, and infrastructure management. `': 'big_small_cat'
+                                'customer relationships, and infrastructure management. Topics left:` #GET_PROG': 'big_small_cat'
                             },
                             'error': {
                                 'state': 'business_pos',
@@ -372,6 +373,7 @@ def visits() -> DialogueFlow:
             'Does the speaker still work on the same business as before or the speaker has started a new business? '
             'Return same or new',
             {V.same_bus.name: ["same"]}, V.same_bus.name, True),
+        'GET_PROG': MacroGetProg(),
         'CHECK_TALK': MacroCheckTalk(),
         'DEL_PROFILE': MacroDelProfile(),
         'talked_sub': MacroTalkedSub(),
@@ -437,6 +439,14 @@ def gpt_completion(input: str, regex: Pattern = None) -> str:
     return output
 
 
+class MacroGetProg(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        prog = str(vars[vars['call_names']].get('progress'))
+        if prog is not None:
+            return prog
+
+        return None
+
 class MacroDelProfile(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         del vars[vars['call_names']]['talked_subsecs']
@@ -445,9 +455,9 @@ class MacroDelProfile(Macro):
 
 class MacroCheckTalk(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        talked_sub = None
+        prev_sub = None
         if vars[vars['call_names']].get('user_responses'):
-            talked_sub = list(vars[vars['call_names']].get('user_responses').keys())
+            prev_sub = list(vars[vars['call_names']].get('user_responses').keys())
         small_cat = vars[vars['call_names']].get('small_cat')
         question_text = None
         with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
@@ -457,8 +467,8 @@ class MacroCheckTalk(Macro):
                     question_text = row['Question']
                     break
 
-        if talked_sub is not None:
-            if small_cat in talked_sub:
+        if prev_sub is not None:
+            if small_cat in prev_sub:
                 prev_plan = vars[vars['call_names']]['user_responses'].get(small_cat)
                 str = 'I asked you about \n' + question_text + '\n and your ' \
                             'previous plan was \n' + prev_plan + '. ' + '\n What do you think about it now?'
@@ -472,16 +482,16 @@ class MacroCheckTalk(Macro):
 
 class MacroTalkedSub(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        talked_sub = list(vars[vars['call_names']].get('user_responses').keys())
+        prev_sub = list(vars[vars['call_names']].get('user_responses').keys())
         str = ''
         for i in range(len(talked_sub)):
-            str += talked_sub[i] + ', '
+            str += prev_sub[i] + ', '
 
         last_topic = vars[vars['call_names']].get('small_cat')
 
         if talked_sub == '':
             return 'It was nice to meet you but we did not get to any of the business element during our last ' \
-                   'conversation. Is there a particular problem area you would like to brainstorm about'
+                   'conversation. Is there a particular business area you would like to brainstorm about'
         return 'Last time we talked about ' + str + 'And we left off with ' + last_topic + '. ' \
                 'How is going with ' + last_topic + '? Do you want to revisit any of the previous ' \
                 'topic or what topic you want to talk about today?'
@@ -869,11 +879,23 @@ class MacroGPTJSON_BS(Macro):
         else:
             vars[vars['call_names']].update(d)
 
+        if d['small_cat'] in talked_sub:
+            d['small_cat'] = None
+
+        if d['small_cat'] is not None:
+            talked_sub.append(d['small_cat'])
+
+        if 'progress' in vars[vars['call_names']].keys():
+            vars[vars['call_names']]['progress'] -= 1
+        else:
+            vars[vars['call_names']]['progress'] = 22
+
+        print(vars[vars['call_names']])
+
         vars['bus_true'] = "True"
 
         if (d['small_cat'] is None or d['small_cat'] == "N/A" or d['small_cat'] == '') and d['large_cat'] is not None:
-            user_responses = vars[vars['call_names']].get('user_responses', {})
-            talked_subsecs = set(user_responses.keys())
+            talked_subsecs = talked_sub
 
             all_subsecs = []  # List of all possible subsec values
 
@@ -885,15 +907,11 @@ class MacroGPTJSON_BS(Macro):
                     if section == d['large_cat']:
                         all_subsecs.append(subsec)
 
-            available_subsecs = list(set(all_subsecs) - talked_subsecs)
+            available_subsecs = list(set(all_subsecs) - set(talked_subsecs))
 
             chosen_subsec = random.choice(available_subsecs) if available_subsecs else None
 
-            # print(chosen_subsec)
-
             vars[vars['call_names']][V.small_cat.name] = chosen_subsec
-
-            vars[vars['call_names']]['talked_subsecs'] = talked_subsecs
 
         return True
 
