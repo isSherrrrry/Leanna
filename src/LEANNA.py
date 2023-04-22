@@ -148,10 +148,10 @@ def visits() -> DialogueFlow:
             }
         },
         '`I am so excited to talk to you about your business. \n'
-        'What is its name and are you selling a product or a service? \n'
-        'A product is something that people can use and is tangible. \n'
-        'Think of a computer or software such as google drive. \n'
-        'A service is something you can provide or perform for another person. \n'
+        'What is its name \n'
+        # 'A product is something that people can use and is tangible. \n'
+        # 'Think of a computer or software such as google drive. \n'
+        # 'A service is something you can provide or perform for another person. \n'
         'For example, a hair salon or a restaurant service. And what industry is your business in?`': {
             'score': 0.4,
             'state': 'bus_name_indu',
