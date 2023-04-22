@@ -105,14 +105,14 @@ def visits() -> DialogueFlow:
 
     transition_joke = {
         'state': 'joke',
-        '#IF($more_jokes=true) `Sure, here is another one. \n` #JOKE `\nDid you like the joke? Feeling better?`': {
+        '#IF($more_jokes=true) `Sure, here is another one. \n` #JOKE `\nDid you like the joke? Feeling better?` #SET($more_jokes=false)': {
             'state': 'joke_next'
         },
         '`Let me tell you something to brighten your day.\n` #JOKE `\nDid you like the joke? Feeling better?`': {
             'state': 'joke_next',
             'score': 0.4,
             '#JOKE_FEEL #SET_SENTIMENT': {
-                '#IF($joke_feel=yes) ` `': 'joke',
+                '#IF($joke_feel=yes) #SET($more_jokes=true) ` `': 'joke',
                 '#IF($sentiment=positive) ` `': {
                     'score': 0.7,
                     'state': 'business_start'
@@ -309,8 +309,8 @@ def visits() -> DialogueFlow:
             'true for talking about business or false for relax.',
             {V.business.name: ["false"]}, V.business.name, True),
         'JOKE_FEEL': MacroGPTJSON(
-            'Is the user requesting more jokes? Answer in yes or no',
-            {V.joke_feel.name: ["yes"]}, V.joke_feel.name, True),
+            'Is the user requesting more jokes? Answer in yes or no. If the user does not specify, then answer no ',
+            {V.joke_feel.name: ["no"]}, V.joke_feel.name, True),
         'SET_BUS_EMO': MacroGPTJSON(
             'Categorize speaker\'s response based on if he is struggling. Positive for no trouble and negative for having trouble.',
             {V.sentiment.name: ["positive"]}, V.sentiment.name, True),
@@ -605,7 +605,7 @@ class MacroJokes(Macro):
         while index in told_jokes:
             index = random.randint(1, len(data) - 1)
         told_jokes.append(index)
-        vars['more_jokes'] = 'true'
+        vars['more_jokes'] = 'false'
         return data[index][0]
 
 
