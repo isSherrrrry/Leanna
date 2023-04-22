@@ -72,7 +72,7 @@ def visits() -> DialogueFlow:
 
     transition_personality = {
         'state': 'personality',
-        '#IF($VISIT=multi) #EMO_ADV': {
+        '#IF(#CHAR_CHECK) #EMO_ADV': {
             '#BUSINESS': {
                 '#IF($business=true) ` `': 'emobus',
                 '`OK please rest well. I\'m always here when you need me. '
@@ -300,6 +300,7 @@ def visits() -> DialogueFlow:
             'Among the three sentiments, negative, positive, and neutral, what is the speaker\'s sentiment?',
             {V.sentiment.name: ["positive"]}, V.sentiment.name, True),
         'JOKE': MacroJokes(),
+        'CHAR_CHECK': MacroCharCheck(),
         'SET_BIG_FIVE': MacroGPTJSON(
             'Analyze the speaker\'s response, categorize  speaker\'s personality into one of the following: '
             'open, conscience, extroversion, introversion, agreeable, and neurotic.',
@@ -503,6 +504,14 @@ class MacroUser(Macro):
             else:
                 return 'Hi ' + vars['call_names'] + ', nice to see you again. How\'s your weekend?'
 
+class MacroCharCheck(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        print(vars['call_names'])
+        print(vars[vars['call_names']])
+        if 'big_five' in vars[vars['call_names']]:
+            return True
+        else:
+            return False
 
 class MacroSave(Macro):
     def __init__(self, new_stuff):
@@ -563,7 +572,7 @@ class MacroEmotion(Macro):
             emo_dict = json.load(json_file)
         personality = None
         if 'big_five' not in vars[vars['call_names']]:
-            if 'big_five' in vars:
+            if 'big_five' in vars and vars['big_five']:
                 ls = vars['big_five']
                 personality = ls[random.randrange(len(ls))]
                 vars[vars['call_names']]['big_five'] = ls
@@ -955,6 +964,7 @@ def load(df: DialogueFlow, varfile: str):
     d = pickle.load(open(varfile, 'rb'))
     d['call_names'] = None
     d['VISIT'] = None
+    d['big_five'] = None
     df.vars().update(d)
     df.run()
     save(df, varfile)
