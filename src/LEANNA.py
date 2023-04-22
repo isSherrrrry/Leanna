@@ -139,11 +139,11 @@ def visits() -> DialogueFlow:
     transition_business = {
         'state': 'business_start',
         '`I am so excited to talk to you about your business. \n'
-        'What is its name and are you selling a product or a service? \n'
+        'What is its name? \n'
         # 'A product is something that people can use and is tangible. \n'
         # 'Think of a computer or software such as google drive. \n'
         # 'A service is something you can provide or perform for another person. \n'
-        'For example, a hair salon or a restaurant service. And what industry is your business in?`': {
+        'And what industry is your business in?`': {
             'score': 0.4,
             'state': 'bus_name_indu',
             '#SET_BUS_NAME': {
@@ -266,14 +266,12 @@ def visits() -> DialogueFlow:
                 'If so, please present me your business plan here. Or we can move on to the next topic.`': {
                     'score': 0.2,
                     '#MOVE_ON': {
-                        '#IF($moveon_choice=yes)': {
-                            '`Sure. Let\'s move on to the next topic. What topics do you want to discuss next? '
+                        '#IF($moveon_choice=yes) `Sure. Let\'s move on to the next topic. What topics do you want to discuss next? '
                             'We can brainstorm about product innovation, '
-                            'customer relationships, and infrastructure management. ` #UPDATE_BP': 'big_small_cat'
-                        },
-                        'error': {
-                            'state': 'business_pos',
-                            'score': 0.1
+                            'customer relationships, and infrastructure management.`': 'big_small_cat',
+                        '` `': {
+                            'score': 0.2,
+                            'state': 'business_pos'
                         }
                     }
                 },
@@ -336,14 +334,12 @@ def visits() -> DialogueFlow:
         ),
         'MOVE_ON': MacroGPTJSON_BP(
             'Does the input sentence indicates that the user wants to move on to next topic? '
-            'Please only return binary answer, yes or no',
-            {V.moveon_choice.name: "yes"},
+            'Please only return binary answer, yes or no, to the first variable in json. Please also return the entire input sentence to the second variable',
+            {V.moveon_choice.name: "yes", V.ans_bp.name: "here's the entire input"},
             set_move_on
         ),
-        'SET_YES_NO_Topic': MacroGPTJSON_BUS(
-            'Please find out if the speaker\'s feeling about this topic.'
-            'If the speaker thinks the topic is good or wants to discuss it, please only return yes.'
-            'If the speaker wants a new topic or does not like this topic, please only return no',
+        'SET_YES_NO_Topic': MacroGPTJSON_BUS_1(
+            'Does the user want to continue on the topic? Please only return yes or no to this question',
             {V.sounds_yesno.name: "yes"},
             set_yesno
         ),
@@ -759,6 +755,43 @@ class MacroGPTJSON_BUS(Macro):
         return True
 
 
+
+class MacroGPTJSON_BUS_1(Macro):
+    def __init__(self, request: str, full_ex: Dict[str, Any], field: str, empty_ex: Dict[str, Any] = None,
+                 set_variables: Callable[[Dict[str, Any], Dict[str, Any]], None] = None):
+        self.request = request
+        self.full_ex = json.dumps(full_ex)
+        self.empty_ex = '' if empty_ex is None else json.dumps(empty_ex)
+        self.check = re.compile(regexutils.generate(full_ex))
+        self.set_variables = set_variables
+        self.field = field
+
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        examples = f'{self.full_ex} or {self.empty_ex} if unavailable' if self.empty_ex else self.full_ex
+        prompt = f'{self.request} Respond in the JSON schema such as {examples}: {ngrams.raw_text().strip()}'
+        output = gpt_completion(prompt)
+        print(output)
+        if not output: return False
+
+        try:
+            d = json.loads(output)
+        except JSONDecodeError:
+            return False
+
+        if d is None:
+            return False
+
+        if self.set_variables:
+            self.set_variables(vars[vars['call_names']], d)
+        else:
+            vars[vars['call_names']].update(d)
+
+        if d.get('sounds_yesno'):
+            vars['sounds_yesno'] = d.get('sounds_yesno')
+
+        return True
+
+
 class MacroGPTJSON_BUS_SETKNOW(Macro):
     def __init__(self, request: str, full_ex: Dict[str, Any], field: str, empty_ex: Dict[str, Any] = None,
                  set_variables: Callable[[Dict[str, Any], Dict[str, Any]], None] = None):
@@ -823,8 +856,11 @@ class MacroGPTJSON_BP(Macro):
         else:
             vars[vars['call_names']].update(d)
 
-        if d['ex_choice'] == 'businessplan':
-            vars[vars['call_names']][V.ans_bp.name] = d[V.ex_bp.name]
+        if d.get('moveon_choice'):
+            vars['moveon_choice'] = d.get('moveon_choice')
+
+        if d.get('ans_bp'):
+            vars['ans_bp'] = d.get('ans_bp')
 
         return True
 
@@ -932,6 +968,7 @@ def set_bus_name(vars: Dict[str, Any], user: Dict[str, Any]):
 
 def set_move_on(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[V.moveon_choice.name] = user[V.moveon_choice.name]
+    vars[V.ans_bp.name] = user[V.ans_bp.name]
 
 
 def set_cat_name(vars: Dict[str, Any], user: Dict[str, Any]):
