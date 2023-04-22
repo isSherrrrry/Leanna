@@ -721,10 +721,10 @@ class MacroGetExample(Macro):
             else:
                 encourage = ''
             return 'Here is an ' + vars[vars['call_names']]['small_cat'] + ' example that might help you \n' + \
-                selected_example + '\n Do you want another example, move on, or to update your business plan now?'
+                selected_example + '\n Do you want another example, move on, or try to answer the question again?'
         else:
             return 'Here is an ' + vars[vars['call_names']]['small_cat'] + ' example that might help you \n' + \
-                selected_example + '\n Do you want another example, move on, or to update your business plan now?'
+                selected_example + '\n Do you want another example, move on, or try to answer the question again?'
 
 
 class MacroGPTJSON_BUS(Macro):
