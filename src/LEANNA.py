@@ -20,7 +20,6 @@ told_jokes = []
 talked_sub = []
 
 
-
 def visits() -> DialogueFlow:
     transition_visit = {
         'state': 'start',
@@ -141,9 +140,9 @@ def visits() -> DialogueFlow:
         'state': 'business_start',
         '`I am so excited to talk to you about your business. \n'
         'What is its name and are you selling a product or a service? \n'
-        'A product is something that people can use and is tangible. \n'
-        'Think of a computer or software such as google drive. \n'
-        'A service is something you can provide or perform for another person. \n'
+        # 'A product is something that people can use and is tangible. \n'
+        # 'Think of a computer or software such as google drive. \n'
+        # 'A service is something you can provide or perform for another person. \n'
         'For example, a hair salon or a restaurant service. And what industry is your business in?`': {
             'score': 0.4,
             'state': 'bus_name_indu',
@@ -152,7 +151,7 @@ def visits() -> DialogueFlow:
                 '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`company. \n'
                 'My role is to help you brainstorm on fuzzy ideas of your business so that you \n'
                 'can have a tangible pitch by the end of our conversation. \n'
-                'Is there a particular problem area you would like to brainstorm about first?`': {
+                'Is there a particular problem area you would like to brainstorm about first?`': { # maybe say something about what leanna aims to do. total sub categories. things about return and quit
                     'state': 'big_small_cat',
                     '#SET_BIG_SAMLL_CATE': {
                         '` `': 'business_sub'
@@ -264,7 +263,7 @@ def visits() -> DialogueFlow:
                     'score': 0.2
                 },
                 '#IF($ex_choice=no) `Of course. Do you want to update what you just thought about the business for this questions? '
-                    'If so, please present me your business plan here. Or we can move on to the next topic.`': {
+                'If so, please present me your business plan here. Or we can move on to the next topic.`': {
                     'score': 0.2,
                     '#MOVE_ON': {
                         '#IF($moveon_choice=yes)': {
@@ -369,6 +368,7 @@ def visits() -> DialogueFlow:
             'Does the speaker still work on the same business as before or the speaker has started a new business? '
             'Return same or new',
             {V.same_bus.name: ["same"]}, V.same_bus.name, True),
+        'GET_PROG': MacroGetProg(),
         'CHECK_TALK': MacroCheckTalk(),
         'DEL_PROFILE': MacroDelProfile(),
         'talked_sub': MacroTalkedSub(),
@@ -442,6 +442,7 @@ class MacroGetProg(Macro):
 
         return None
 
+
 class MacroDelProfile(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         del vars[vars['call_names']]['talked_subsecs']
@@ -466,7 +467,7 @@ class MacroCheckTalk(Macro):
             if small_cat in prev_sub:
                 prev_plan = vars[vars['call_names']]['user_responses'].get(small_cat)
                 str = 'I asked you about \n' + question_text + '\n and your ' \
-                            'previous plan was \n' + prev_plan + '. ' + '\n What do you think about it now?'
+                                                               'previous plan was \n' + prev_plan + '. ' + '\n What do you think about it now?'
                 return str
             else:
 
@@ -488,8 +489,8 @@ class MacroTalkedSub(Macro):
             return 'It was nice to meet you but we did not get to any of the business element during our last ' \
                    'conversation. Is there a particular business area you would like to brainstorm about'
         return 'Last time we talked about ' + str + 'And we left off with ' + last_topic + '. ' \
-                'How is going with ' + last_topic + '? Do you want to revisit any of the previous ' \
-                'topic or what topic you want to talk about today?'
+                                                                                           'How is going with ' + last_topic + '? Do you want to revisit any of the previous ' \
+                                                                                                                               'topic or what topic you want to talk about today?'
 
 
 class MacroUser(Macro):
@@ -509,6 +510,7 @@ class MacroUser(Macro):
             else:
                 return 'Hi ' + vars['call_names'] + ', nice to see you again. How\'s your weekend?'
 
+
 class MacroCharCheck(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         print(vars['call_names'])
@@ -517,6 +519,7 @@ class MacroCharCheck(Macro):
             return True
         else:
             return False
+
 
 class MacroSave(Macro):
     def __init__(self, new_stuff):
@@ -646,7 +649,6 @@ class MacroPrintResponses(Macro):
         return response_text.strip()
 
 
-
 class MacroUpdateResponses(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         small_cat = vars[vars['call_names']].get('small_cat')
@@ -721,7 +723,7 @@ class MacroGetExample(Macro):
         vars[vars['call_names']][used_examples_key] = used_examples
 
         return 'Here is an ' + vars[vars['call_names']]['small_cat'] + ' example that might help you \n' + \
-                selected_example + '\n Do you want another example?'
+            selected_example + '\n Do you want another example?'
 
 
 class MacroGPTJSON_BUS(Macro):
@@ -926,6 +928,7 @@ def get_small_cat(vars: Dict[str, Any]):
 def set_bus_name(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[vars['call_names']][V.business_name.name] = user[V.business_name.name]
     vars[vars['call_names']][V.industry.name] = user[V.industry.name]
+
 
 def set_move_on(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[V.moveon_choice.name] = user[V.moveon_choice.name]
