@@ -12,12 +12,12 @@ import time
 import re
 import openai
 import regexutils
-import businesModel
 
 PATH_API_KEY = '../resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
 
 told_jokes = []
+
 
 
 def visits() -> DialogueFlow:
@@ -193,7 +193,7 @@ def visits() -> DialogueFlow:
         'I got to know more about`#GET_BUS_NAME`and it was awesome! I hope you gained some new insights as well by answering my questions.'
         'Would you like a summary of what we talked about? `': {
             '#SET_YES_NO_S': {
-                '#IF($summary=yes) `there you go \n` #GET_SUMMARY': 'end',
+                '#IF($summary=yes) `Here\'s your summary \n `#GET_SUMMARY` Thank you!`': 'end',
                 '`Alright. Thanks for using Leanna! Please come back when you have more ideas. '
                 'Leanna can always pick up where we have left this time.`': {
                     'score': 0.2,
@@ -270,7 +270,7 @@ def visits() -> DialogueFlow:
                             '#IF($moveon_choice=yes)': {
                                 '`Sure. Let\'s move on to the next topic. What topics do you want to discuss next? '
                                 'We can brainstorm about product innovation, '
-                                'customer relationships, and infrastructure management. `': 'big_small_cat'
+                                'customer relationships, and infrastructure management. ` #UPDATE_BP': 'big_small_cat'
                             },
                             'error': {
                                 'state': 'business_pos',
@@ -522,7 +522,6 @@ class MacroSave(Macro):
         if name not in vars:
             vars[name] = {}
         vars[name].update({self.save: vars[vars['call_names']][self.save]})
-        # print(vars[name][self.save])
 
 
 class MacroGPTJSON(Macro):
@@ -540,17 +539,14 @@ class MacroGPTJSON(Macro):
         examples = f'{self.full_ex} or {self.empty_ex} if unavailable' if self.empty_ex else self.full_ex
         prompt = f'{self.request} Respond in the JSON schema such as {examples}: {ngrams.raw_text().strip()}'
         output = gpt_completion(prompt)
-        print(output)
 
         if not output:
             return False
 
         try:
             d = json.loads(output)
-            print(d)
         except JSONDecodeError:
             return False
-        # print(d)
         if self.set_variables:
             self.set_variables(vars, d)
         else:
@@ -558,10 +554,6 @@ class MacroGPTJSON(Macro):
         if self.direct:
             ls = vars[self.field]
             vars[self.field] = ls[random.randrange(len(ls))]
-        # print(self.field)
-        # print(vars[self.field])
-
-        print(vars)
 
         return True
 
@@ -643,15 +635,16 @@ class MacroPrintResponses(Macro):
         response_text = ""
 
         for small_cat, user_response in user_responses.items():
-            response_text += f"{small_cat}: {user_response}\n\n"
+            if user_response is not None:
+                response_text += f"{small_cat}: {user_response}\n\n"
 
         return response_text.strip()
+
 
 
 class MacroUpdateResponses(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         small_cat = vars[vars['call_names']].get('small_cat')
-        print(small_cat)
         ans_bp = vars.get('ans_bp')
 
         user_responses = vars[vars['call_names']].get('user_responses', {})
@@ -755,7 +748,6 @@ class MacroGPTJSON_BUS(Macro):
         try:
             d = json.loads(output)
         except JSONDecodeError:
-            print(f'Invalid: {output}')
             return False
 
         if d is None:
@@ -790,7 +782,6 @@ class MacroGPTJSON_BUS_SETKNOW(Macro):
 
         try:
             d = json.loads(output)
-            print(d)
         except JSONDecodeError:
             print(f'Invalid: {output}')
             return False
@@ -933,7 +924,7 @@ def set_bus_name(vars: Dict[str, Any], user: Dict[str, Any]):
     vars[vars['call_names']][V.industry.name] = user[V.industry.name]
 
 def set_move_on(vars: Dict[str, Any], user: Dict[str, Any]):
-    vars[vars['call_names']][V.moveon_choice.name] = user[V.moveon_choice.name]
+    vars[V.moveon_choice.name] = user[V.moveon_choice.name]
 
 
 def set_cat_name(vars: Dict[str, Any], user: Dict[str, Any]):
@@ -951,8 +942,7 @@ def set_know(vars: Dict[str, Any], user: Dict[str, Any]):
 
 
 def set_ex_idea(vars: Dict[str, Any], user: Dict[str, Any]):
-    vars[vars['call_names']][V.ex_choice.name] = user[V.ex_choice.name]
-    vars[vars['call_names']][V.ex_bp.name] = user[V.ex_bp.name]
+    vars[V.ex_choice.name] = user[V.ex_choice.name]
 
 
 def save(df: DialogueFlow, varfile: str):
