@@ -32,8 +32,9 @@ talked_sub = []
 def visits() -> DialogueFlow:
     transition_visit = {
         'state': 'start',
-        '`Hi, I\'m Leanna, your personal start-up consultant. I had the pleasure to meet you at #TIME \n'
-        ' May I know the name of our future business tycoon?`': {
+        "`Hi, I\'m Leanna, your personal start-up consultant. I had the pleasure to meet you at `#TIME` \n "
+        "May I know your name please? Also, I won\'t be offended anytime if you want to take a break."
+        "Just type 'quit', we can pick up where we left off next time`": {
             '#SET_CALL_NAMES': {
                 '#USER_PROFILE': {
                     '#SET_SENTIMENT': {
@@ -44,11 +45,14 @@ def visits() -> DialogueFlow:
                             'state': 'business_start',
                             'score': 0.1
                         }
+                    },
+                    'error': {
+                        'state': 'joke'
                     }
                 }
             },
             'error': {
-                '`Sorry`': 'start'
+                '`Please don\'t trick me with your name??? Let\'s try this again`': 'start'
             }
         }
     }
@@ -56,11 +60,16 @@ def visits() -> DialogueFlow:
     transition_emobus = {
         'state': 'emobus',
         '#IF($VISIT=multi) `Hi, we were discussing your `#GET_BUS_NAME` in `#GET_INDU industry`. '
-        'Are you still on this business? If not, what business in what industry?`': {
+        'Are you still working on the same business?`': {
             '#SAME_BUS': {
-                '#IF($same_bus=new)': {
-                    '#DEL_PROFILE `Sorry to hear that, but I\'m really interested in your new business. '
-                    'What is its name?`': 'bus_name_indu'
+                '#IF($same_bus=new) #DEL_PROFILE `Sorry to hear that, what makes you '
+                'decide to give up your old business idea?`': {
+                    'error': {
+                        '`What you have said is quite common for college entrepreneurs. Things happen but you guys'
+                        ' are always good at discovering new ideas. \n'
+                        'I\'m really interested in your new business. '
+                        'What is its name and in what industry?`': 'bus_name_indu'
+                    }
                 },
                 '#talked_sub': {
                     'score': 0.4,
@@ -68,10 +77,19 @@ def visits() -> DialogueFlow:
                 }
             },
             'error': {
-                '`sorry I don\'t understand you`': 'business_part'
+                '`I actually think` #GET_BUS_NAME is quite interesting. Do you want to keep working on it?': {
+                    '#SET_YES_NO_B': {
+                        '#IF($prev_bus=yes)': {
+                            'state': 'business_part'
+                        },
+                        '#DEL_PROFILE `Sorry to hear that, but I will help you do this all over again.\n'
+                        'What is the name of your new business and what industry is it in?`': 'bus_name_indu'
+                    }
+                }
+
             }
         },
-        '`Could you tell me a little bit about your entrepreneurial journey so far?`': {
+        '`How far along have you gone with your business idea`': {
             'score': 0.4,
             'error': {
                 '`Glad to hear that. Let me help you further your entrepreneurial journey`': 'business_start'
@@ -88,6 +106,10 @@ def visits() -> DialogueFlow:
                 'Come back when you are ready to talk about business. `': {
                     'state': 'end'
                 }
+            },
+            'error': {
+                '`No need to push it, I understand college students are busy\n'
+                'Building a startup is a long process. Go and recharge today and we can talk later`': 'end'
             }
         },
         '`I had a great time with some of my other chatbot friends last week, trading stories, macros, '
@@ -103,21 +125,28 @@ def visits() -> DialogueFlow:
                             'score': 0.1,
                             'state': 'end'
                         }
+                    },
+                    'error': {
+                        '`No need to push it, I understand college students are busy\n'
+                        'Building a startup is a long process. Go and recharge today and we can talk later`': 'end'
                     }
                 }
             },
             'error': {
-                '`I didn\'t understand you`': 'end'
+                '`It\'s interesting to hear how your friends perceive you. It sounds like you have '
+                'strong relationships with those around and value their opinions\n`': 'business_start'
             }
         }
     }
 
     transition_joke = {
         'state': 'joke',
-        '#IF($more_jokes=true) `Sure, here is another one. \n` #JOKE `\nDid you like the joke? Feeling better?` #SET($more_jokes=false)': {
+        '#IF($more_jokes=true) `Here comes another one. \n` #JOKE `\n'
+        'How do you like it? Feeling better?` #SET($more_jokes=false)': {
             'state': 'joke_next'
         },
-        '`Let me tell you something to brighten your day.\n` #JOKE `\nDid you like the joke? Feeling better?`': {
+        '`Let me tell you something to brighten your day.\n` #JOKE `\n'
+        'How do you like it? Feeling better?`': {
             'state': 'joke_next',
             'score': 0.4,
             '#JOKE_FEEL #SET_SENTIMENT': {
@@ -132,7 +161,8 @@ def visits() -> DialogueFlow:
                 }
             },
             'error': {
-                '`I didn\'t understand you`': 'end'
+                '`I hope I get you to chuckle. Having a optimistic attitude on your entrepreneurial '
+                'journey is very important. OK!`': 'business_start'
             }
         }
 
@@ -148,28 +178,26 @@ def visits() -> DialogueFlow:
     transition_business = {
         'state': 'business_start',
         '`I am so excited to talk to you about your business. \n'
-        'What is its name? \n'
-        # 'A product is something that people can use and is tangible. \n'
-        # 'Think of a computer or software such as google drive. \n'
-        # 'A service is something you can provide or perform for another person. \n'
-        'And what industry is your business in?`': {
+        'What is its name? And what industry is your business in?`': {
             'score': 0.4,
             'state': 'bus_name_indu',
             '#SET_BUS_NAME': {
                 '`Thanks for letting me know! That sounds super exciting. \n'
+                'My role is to help you brainstorm by asking you critical business element for a start up \n'
+                'so that you can have a tangible pitch by the end of our conversation. \n'
+                'I have prepared questions and examples for 23 business concepts\n After going through them'
                 '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`company. \n'
-                'My role is to help you brainstorm on fuzzy ideas of your business so that you \n'
-                'can have a tangible pitch by the end of our conversation. \n'
-                'Is there a particular problem area you would like to brainstorm about first?`': { # maybe say something about what leanna aims to do. total sub categories. things about return and quit
+                'And I will forward you to another business expert to evaluate your business plan'
+                'Is there a particular business problem you would like to brainstorm about first?`': {
                     'state': 'big_small_cat',
                     '#SET_BIG_SAMLL_CATE': {
                         '` `': 'business_sub'
                     },
                     'error': {
-                        '`Cool!`#GET_AVAIL_CATE` Do you want to start with this topic?`': {
+                        '`How about `#GET_AVAIL_CATE` Does it sound like a topic you want to discuss?`': {
                             '#SET_YES_NO_Topic': {
-                                '#IF($sounds_yesno=yes)`Cool! Let\'s start.`': 'business_sub',
-                                '`Okay, what topic you want to start with? '
+                                '#IF($sounds_yesno=yes)`Good! Let\'s think about this question\n` #GET_QUESTION': 'business_sub',
+                                '`No problem, what topic you want to start with? '
                                 'We can talk about product innovation, customer relationships, '
                                 'and infrastructure management. `': {
                                     'score': 0.4,
@@ -366,6 +394,9 @@ def visits() -> DialogueFlow:
         'SET_YES_NO_S': MacroGPTJSON(
             'Does the user want a summary of the conversation. Categorize the input sentence as either yes or no',
             {V.summary.name: ["yes"]}, V.summary.name, True),
+        'SET_YES_NO_B': MacroGPTJSON(
+            'Does the user want to keep working on his business plan? Categorize the input sentence as either yes or no',
+            {V.prev_bus.name: ["yes"]}, V.prev_bus.name, True),
         'SET_YES_NO_E': MacroGPTJSON(
             'Does the user want to work on his business plan today. Categorize the input sentence as either yes or no',
             {V.work.name: ["yes"]}, V.work.name, True),
@@ -373,8 +404,8 @@ def visits() -> DialogueFlow:
             'Does the users want another example? Categorize the input sentence as either yes or no',
             {V.ex_choice.name: ["yes"]}, V.ex_choice.name, True),
         'SAME_BUS': MacroGPTJSON(
-            'Does the speaker still work on the same business as before or the speaker has started a new business? '
-            'Return same or new',
+            'Does the user still work on the same business as before? '
+            'Categorize the input sentence as either same business or new business',
             {V.same_bus.name: ["same"]}, V.same_bus.name, True),
         'GET_PROG': MacroGetProg(),
         'CHECK_TALK': MacroCheckTalk(),
@@ -427,6 +458,7 @@ class V(Enum):
     same_bus = 16
     work = 17
     feel = 18
+    prev_bus = 19
 
 
 def gpt_completion(input: str, regex: Pattern = None) -> str:
@@ -454,8 +486,10 @@ class MacroGetProg(Macro):
 
 class MacroDelProfile(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        del vars[vars['call_names']]['talked_subsecs']
-        del vars[vars['call_names']]['user_responses']
+        if 'talked_subsecs' in vars[vars['call_names']]:
+            del vars[vars['call_names']]['talked_subsecs']
+        if 'user_responses' in vars[vars['call_names']]:
+            del vars[vars['call_names']]['user_responses']
 
 
 class MacroCheckTalk(Macro):
@@ -487,20 +521,23 @@ class MacroCheckTalk(Macro):
 
 class MacroTalkedSub(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        prev_sub = list(vars[vars['call_names']].get('user_responses').keys())
+        prev_sub = None
+        if vars[vars['call_names']].get('user_responses') is not None:
+            prev_sub = list(vars[vars['call_names']].get('user_responses').keys())
+
+        if prev_sub is None:
+            return 'It was nice to meet you last time but we did not get to any of the business element during ' \
+                   'our last conversation. Is there a particular business area you would like to brainstorm about? '
+
         str = ''
-        for i in range(len(talked_sub)):
+        for i in range(len(prev_sub)):
             str += prev_sub[i] + ', '
 
         last_topic = vars[vars['call_names']].get('small_cat')
 
-        if talked_sub == '':
-            return 'It was nice to meet you but we did not get to any of the business element during our last ' \
-                   'conversation. Is there a particular business area you would like to brainstorm about'
         return 'Last time we talked about ' + str + 'And we left off with ' + last_topic + '. ' \
-                                                                                           'How is going with ' + last_topic + '? Do you want to revisit any of the previous ' \
-                                                                                                                               'topic or what topic you want to talk about today?'
-
+                    'How is going with ' + last_topic + '? Do you want to revisit any of the previous ' \
+                    'topic or what topic you want to talk about today?'
 
 class MacroUser(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
@@ -571,6 +608,8 @@ class MacroGPTJSON(Macro):
         if self.direct:
             ls = vars[self.field]
             vars[self.field] = ls[random.randrange(len(ls))]
+
+        print(d)
 
         return True
 
@@ -702,7 +741,7 @@ class MacroGetAvailCat(Macro):
         vars[vars['call_names']]['large_cat'] = chosen_large_cat
         vars[vars['call_names']]['large_cat_name'] = chosen_large_cat
 
-        return f"I can start you with {chosen_large_cat} in the {chosen_subsec}"
+        return f"{chosen_subsec}? It is an important component of {chosen_large_cat}"
 
 
 class MacroGetExample(Macro):
