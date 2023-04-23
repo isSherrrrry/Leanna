@@ -828,7 +828,8 @@ class MacroGetExample(Macro):
             vars['first_ex'] = False
             return 'Let me scaffold you to this question. Here is an ' + vars[vars['call_names']]['small_cat'] \
                 + ' example that might help you understand and brainstorm\n' + \
-                selected_example + '\n If this example doesn\'t apply to your business, I can give you a different one.'
+                selected_example + '\n If this example doesn\'t apply to your business, I can give you a different one.' \
+                                   'Do you want to another example?'
         else:
             return 'Here is another example that might align better with your business\n' + selected_example
 
