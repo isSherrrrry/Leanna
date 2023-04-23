@@ -20,13 +20,18 @@ openai.api_key_path = PATH_API_KEY
 def visits() -> DialogueFlow:
     transition_greeting = {
         'state': 'start',
-        '`Hi, my name is Movie Bot. What\'s your name?`': {
+        '`Hi, my name is Bomo. I am here to talk about movies. \n '
+        'What\'s your name? \n '
+        'By the way, although I will be extremely sad:( '
+        'but you can quit anytime by typing quit to me.`': {
             '#SET_CALL_NAMES': {
                 '#USER_GREETING `Do you like watching movies?`': {
                     '#YESNO': {
-                        '#IF($yesno=yes) `Great! I like watching movies too. I recently just watched a movie called '
-                        'Babel.`': 'babel_start',
-                        '`Okay, I am actually a big fan of movies. I just watched a movie called Babel and like it very'
+                        '#IF($yesno=yes) `Great! I like watching movies too. \n '
+                        'I recently just watched a movie called '
+                        'Babel. `': 'babel_start',
+                        '`Okay, I am actually a big fan of movies. \n '
+                        'I just watched a movie called Babel and like it very'
                         ' much!`': {
                             'score': 0.1,
                             'state': 'babel_start'
@@ -40,14 +45,26 @@ def visits() -> DialogueFlow:
         }
     }
 
+    global_transition = {
+        'quit': {
+            'score': 1.5,
+            'state': 'business_end'
+        }
+    }
+
     transition_babel = {
         'state': 'babel_start',
-        '`Have you heard of this movie before?`': {
+        '`I know you have watched the movie before. \n '
+        'I like the movie very much, '
+        'especially the background story of Babel Tower. \n'
+        ' Do you know the story of Babel Tower?`': {
             '#YESNO': {
-                '#IF($yesno=yes) `I\'m glad you know this movie.`': 'end',
-                '`No worries. It\'s a movie that involves with concepts of multi-lingual, translation, and communication.`': {
+                '#IF($yesno=yes) `I\'m glad you know it too. \n '
+                'I like the concept of translating up and down too.`': 'updown',
+                '`Elaborate the story of Babel Tower. \n'
+                ' I like the concept of translating up and down too.`': {
                     'score': 0.1,
-                    'state': 'end'
+                    'state': 'updown'
                 }
             }
         }
@@ -55,9 +72,30 @@ def visits() -> DialogueFlow:
 
     transition_updown = {
         'state': 'updown',
-        '`You know, in translation, there is a concept called "translating up/down". Translating up is from less'
-        ' powerful language to more powerful language. Translating down is the other way around. Do you notice any '
-        'scenes where translating down affect?`': 'end'
+        '`You know, in translation, there is a concept called "translating up/down". \n '
+        'Translating up is from less'
+        ' powerful language to more powerful language. \n'
+        ' Translating down is the other way around. Do you notice any '
+        'scenes where translating down affect?`': {
+            '#GET_KNOW_UPDOWN': {
+                '#IF($user_know=yes) `THE PHRASE`': 'end',
+                '`THE PHRASE. Can you think of any similar scenes in the movie?`': {
+                    'score': 0.2,
+                    '#YESNO': {
+                        '#IF(#yesno=yes) `Wow, you are absolutely right. The power of the language definitely '
+                        'plays a role in here. This conversation is interesting. I happened to find some quotes '
+                        'related to this movie.`': 'end',
+                        '`It’s ok, I have some interesting quotes related to the movie that you might find '
+                        'interesting. I want to know how you think about them.`': {
+                            'score': 0.2,
+                            'state': 'end'
+                        }
+                    }
+
+                }
+
+            }
+        }
 
     }
 
@@ -67,11 +105,16 @@ def visits() -> DialogueFlow:
             {V.call_names.name: ["mike"]}, V.call_names.name, True),
         'YESNO': MacroGPTJSON(
             'The speaker is answering a yes/no question. Categorize his response into yes or no',
-            {V.yesno.name: ["yes"]}, V.yesno.name, True),
+            {V.yesno.name: "yes"}, V.yesno.name, True),
+        'GET_KNOW_UPDOWN': MacroGPTJSON(
+            'Does the user mentions a scene in the movie Babel and relates to the term of translating down?'
+            'Categorize the response into yes or no',
+            {V.user_know.name: "yes"}, V.user_know.name, True),
         'USER_GREETING': MacroUser()
     }
 
     df = DialogueFlow('start', end_state='end')
+    df.load_global_nlu(global_transition)
     df.load_transitions(transition_greeting)
     df.load_transitions(transition_babel)
     df.load_transitions(transition_updown)
@@ -81,6 +124,7 @@ def visits() -> DialogueFlow:
 class V(Enum):
     call_names = 0 #str
     yesno = 1 #str
+    user_know = 2
 
 
 class MacroGPTJSON(Macro):

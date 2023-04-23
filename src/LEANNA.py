@@ -946,37 +946,33 @@ class MacroGPTJSON_BS(Macro):
         else:
             vars[vars['call_names']].update(d)
 
+        if not d['large_cat']:
+            return False
+
         if d['small_cat'] in talked_sub:
             d['small_cat'] = None
-
-        if d['small_cat'] is not None:
+        elif d['small_cat']:
             talked_sub.append(d['small_cat'])
 
-        if 'progress' in vars[vars['call_names']].keys():
-            vars[vars['call_names']]['progress'] -= 1
-        else:
-            vars[vars['call_names']]['progress'] = 22
-
+        vars[vars['call_names']]['progress'] = vars[vars['call_names']].get('progress', 22) - 1
         print(vars[vars['call_names']])
-
         vars['bus_true'] = "True"
 
-        if (d['small_cat'] is None or d['small_cat'] == "N/A" or d['small_cat'] == '') and d['large_cat'] is not None:
-            talked_subsecs = talked_sub
+        if (not d['small_cat'] or d['small_cat'] == "N/A") and d['large_cat']:
+            all_subsecs = [row['subsec'] for row in
+                           csv.DictReader(open('../resources/data.csv', newline='', encoding='utf-8')) if
+                           row['Section'] == d['large_cat']]
+            available_subsecs = list(set(all_subsecs) - set(talked_sub))
 
-            all_subsecs = []  # List of all possible subsec values
-
-            with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
-                reader = csv.DictReader(csvfile)
-                for row in reader:
-                    subsec = row['subsec']
-                    section = row['Section']
-                    if section == d['large_cat']:
-                        all_subsecs.append(subsec)
-
-            available_subsecs = list(set(all_subsecs) - set(talked_subsecs))
-
-            chosen_subsec = random.choice(available_subsecs) if available_subsecs else None
+            if not available_subsecs:
+                all_rows = list(csv.DictReader(open('../resources/data.csv', newline='', encoding='utf-8')))
+                unique_subsecs = set(row['subsec'] for row in all_rows)
+                available_subsecs = list(unique_subsecs - set(talked_sub))
+                chosen_row = random.choice(all_rows)
+                d['large_cat'] = chosen_row['Section']
+                chosen_subsec = chosen_row['subsec']
+            else:
+                chosen_subsec = random.choice(available_subsecs) if available_subsecs else None
 
             vars[vars['call_names']][V.small_cat.name] = chosen_subsec
 
