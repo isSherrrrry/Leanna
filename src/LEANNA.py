@@ -19,6 +19,7 @@ openai.api_key_path = PATH_API_KEY
 told_jokes = []
 talked_sub = []
 
+
 # language: not natural. too blunt. no introduction. no quit. error state not handled
 # next step
 
@@ -52,7 +53,7 @@ def visits() -> DialogueFlow:
 
     transition_emobus = {
         'state': 'emobus',
-        '#IF($VISIT=multi) `Hi, we were discussing your `#GET_BUS_NAME` in `#GET_INDU industry`. '
+        '#IF($VISIT=multi) `Hi, we were discussing your `#GET_BUS_NAME`'
         'Are you still working on the same business?`': {
             '#SAME_BUS': {
                 '#IF($same_bus=new) #DEL_PROFILE `Sorry to hear that, what makes you '
@@ -522,13 +523,13 @@ class MacroCheckTalk(Macro):
             if small_cat in prev_sub:
                 prev_plan = vars[vars['call_names']]['user_responses'].get(small_cat)
                 str = 'I asked you about \n' + question_text + '\n and your ' \
-                        'previous plan was \n' + prev_plan + '. ' + '\n What do you think about it now?'
+                                                               'previous plan was \n' + prev_plan + '. ' + '\n What do you think about it now?'
                 return str
             else:
-                str = 'let\'s think about this question: ' + question_text
+                str = 'let\'s think about this question: \n' + question_text
                 return str
 
-        return 'let\'s think about this question: ' + question_text + '\n'
+        return 'let\'s think about this question: \n' + question_text
 
 
 class MacroTalkedSub(Macro):
@@ -548,8 +549,8 @@ class MacroTalkedSub(Macro):
         last_topic = vars[vars['call_names']].get('small_cat')
 
         return 'Last time we talked about ' + str + 'And we left off with ' + last_topic + '. ' \
-                'How is going with ' + last_topic + '? What topic you want to talk about today. We can revisit ' \
-                'some of the topic we discussed last time if you have new ideas on them'
+                                                                                           'How is going with ' + last_topic + '? What topic you want to talk about today. We can revisit ' \
+                                                                                                                               'some of the topic we discussed last time if you have new ideas on them'
 
 
 class MacroUser(Macro):
@@ -650,9 +651,9 @@ class MacroEmotion(Macro):
                 while vars[vars['call_names']]['prev_adv'] == adv:
                     adv = emo_dict[personality][random.randrange(3)]
             vars[vars['call_names']]['prev_adv'] = adv
-            return adv + 'Also, relax, I know doing a start-up could be hard. ' \
-                         'That\'s the reason why I was created to help. ' \
-                         'Do you feel like working on your business idea today? Or you rather relax?'
+            return 'I have several other friends like you' + adv + '\n Also, relax, I know doing a start-up is ' \
+                        'stressful especially for college students like you. Do you feel like ' \
+                        'working on your business idea today? Or you rather try my relaxation advice?'
         else:
             return
 
@@ -973,7 +974,7 @@ class MacroGPTJSON_BS(Macro):
         if 'user_responses' in vars[vars['call_names']]:
             asw_cat = vars[vars['call_names']]['user_responses'].keys()
 
-        if d['small_cat'] not in asw_cat:
+        if (asw_cat is not None) and (d['small_cat'] not in asw_cat):
             vars[vars['call_names']]['progress'] = vars[vars['call_names']].get('progress', 22) - 1
 
         vars['bus_true'] = "True"
