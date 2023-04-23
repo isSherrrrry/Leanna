@@ -48,7 +48,7 @@ def visits() -> DialogueFlow:
     global_transition = {
         'quit': {
             'score': 1.5,
-            'state': 'business_end'
+            'state': 'depart'
         }
     }
 
@@ -78,17 +78,17 @@ def visits() -> DialogueFlow:
         ' Translating down is the other way around. Do you notice any '
         'scenes where translating down affect?`': {
             '#GET_KNOW_UPDOWN': {
-                '#IF($user_know=yes) `THE PHRASE`': 'end',
+                '#IF($user_know=yes) `THE PHRASE`': 'quote',
                 '`THE PHRASE. Can you think of any similar scenes in the movie?`': {
                     'score': 0.2,
                     '#YESNO': {
                         '#IF(#yesno=yes) `Wow, you are absolutely right. The power of the language definitely '
                         'plays a role in here. This conversation is interesting. I happened to find some quotes '
-                        'related to this movie.`': 'end',
+                        'related to this movie.`': 'quote',
                         '`It’s ok, I have some interesting quotes related to the movie that you might find '
                         'interesting. I want to know how you think about them.`': {
                             'score': 0.2,
-                            'state': 'end'
+                            'state': 'quote'
                         }
                     }
 
@@ -97,6 +97,30 @@ def visits() -> DialogueFlow:
             }
         }
 
+    }
+
+    transition_quotes = {
+        'state': 'quote',
+        '#GET_QUOTE `Do you find any scenes in the movie that can relate to this quote?`': {
+            '#QUOTE_ANS': {
+                '#IF(yesno=yes) `Yeah, I totally agree` #GET_RESPONSE `Would you like another quote?`': {
+                    'state': 'more_quote',
+                    '#YESNO': {
+                        '#IF(yesno=yes) `Sure, here is another one.`': 'quote',
+                        'Okay': {
+                            'score': 0.1,
+                            'state': 'depart'
+                        }
+                    }
+                },
+                '`It\'s ok if you cannot find any.` #GET_RESPONSE `Would you like another quote?`': 'more_quote'
+            }
+        }
+    }
+
+    transition_depart = {
+        'state': 'depart',
+        '`It was nice talking to you! I hope you have a wonderful day. Goodbye.`': 'end'
     }
 
     macros = {
@@ -110,7 +134,12 @@ def visits() -> DialogueFlow:
             'Does the user mentions a scene in the movie Babel and relates to the term of translating down?'
             'Categorize the response into yes or no',
             {V.user_know.name: "yes"}, V.user_know.name, True),
-        'USER_GREETING': MacroUser()
+        'QUOTE_ANS': MacroGPTJSON(
+            'Does speaker refer to a specific scene in the movie Babel? Categorize the response into yes or no',
+            {V.yesno.name: "yes"}, V.yesno.name, True),
+        'USER_GREETING': MacroUser(),
+        'GET_QUOTE': MacroQuote(),
+        'GET_RESPONSE': MacroResponse()
     }
 
     df = DialogueFlow('start', end_state='end')
@@ -118,13 +147,16 @@ def visits() -> DialogueFlow:
     df.load_transitions(transition_greeting)
     df.load_transitions(transition_babel)
     df.load_transitions(transition_updown)
+    df.load_transitions(transition_depart)
     df.add_macros(macros)
     return df
 
 class V(Enum):
-    call_names = 0 #str
-    yesno = 1 #str
+    call_names = 0 # str
+    yesno = 1 # str
     user_know = 2
+    quotes = 3 # list
+    response = 4 # str
 
 
 class MacroGPTJSON(Macro):
@@ -158,7 +190,8 @@ class MacroGPTJSON(Macro):
             vars.update(d)
         if self.direct:
             ls = vars[self.field]
-            vars[self.field] = ls[random.randrange(len(ls))]
+            if isinstance(ls, list):
+                vars[self.field] = ls[random.randrange(len(ls))]
 
         print(vars) # for debug
 
@@ -178,6 +211,27 @@ class MacroUser(Macro):
                     'call_names'] + ', nice to see you again. Did you try the advice I gave you last time? How was it?'
             else:
                 return 'Hi ' + vars['call_names'] + ', nice to see you again.'
+
+class MacroQuote(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        with open('../resources/quotes.json') as json_file:
+            quotes = json.load(json_file)
+        out_quote, response = random.choice(list(quotes.items()))
+        if 'quotes' in vars:
+            while out_quote in vars['quotes']:
+                out_quote, response = random.choice(list(quotes.items()))
+            vars['quotes'].append(out_quote)
+        else:
+            vars['quotes'] = [out_quote]
+        vars['response'] = response
+        return '"' + out_quote + '"'
+
+class MacroResponse(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        if 'response' in vars:
+            return vars['response']
+        else:
+            return
 
 
 def gpt_completion(input: str, regex: Pattern = None) -> str:
