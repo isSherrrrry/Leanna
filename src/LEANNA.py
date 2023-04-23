@@ -490,7 +490,7 @@ def gpt_completion(input: str, regex: Pattern = None) -> str:
     return output
 
 
-# THERE'S ERROR
+# THERE'S ERROR!
 class MacroGetProg(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         prog = str(vars[vars['call_names']].get('progress'))
