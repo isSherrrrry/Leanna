@@ -490,6 +490,7 @@ def gpt_completion(input: str, regex: Pattern = None) -> str:
     return output
 
 
+# THERE'S ERROR
 class MacroGetProg(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         prog = str(vars[vars['call_names']].get('progress'))
@@ -970,6 +971,8 @@ class MacroGPTJSON_BS(Macro):
             d['small_cat'] = None
         elif d['small_cat']:
             talked_sub.append(d['small_cat'])
+
+        asw_cat = []
 
         if 'user_responses' in vars[vars['call_names']]:
             asw_cat = vars[vars['call_names']]['user_responses'].keys()
