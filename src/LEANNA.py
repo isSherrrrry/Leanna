@@ -20,11 +20,20 @@ told_jokes = []
 talked_sub = []
 
 
+# language: not natural. too blunt. no introduction. no quit. error state not handled
+# return user without any recorded response in the first time
+# next step
+# print previous topic need debug
+
+# GPT big_cat errors. need double checks. check big cat match one of the three, otherwise return false
+# check all small topics exhausted
+
+
 def visits() -> DialogueFlow:
     transition_visit = {
         'state': 'start',
-        '`Hi, I\'m Leanna, your personal start-up consultant. At` #TIME `, I had the pleasure to meet you.'
-        ' \n With time as our guide, our encounter was meant to be. May I know the name of our future business tycoon?`': {
+        '`Hi, I\'m Leanna, your personal start-up consultant. I had the pleasure to meet you at #TIME \n'
+        ' May I know the name of our future business tycoon?`': {
             '#SET_CALL_NAMES': {
                 '#USER_PROFILE': {
                     '#SET_SENTIMENT': {
@@ -249,8 +258,8 @@ def visits() -> DialogueFlow:
         '#IF($all) `Thanks, I have recorded it to the our meeting notes.` #UPDATE_BP': 'business_end',
         '`Thanks, I have recorded it to the meeting notes. What do you want to talk about next under '
         'the big brainstorm umbrellas of product innovation, customer relationships, '
-        'and infrastructure managment? Left topics` #GET_PROG #UPDATE_BP': {
-            'state': 'big_small_cat',
+        'and infrastructure management? Left topics` #GET_PROG #UPDATE_BP': {
+            'state': 'big_small_cat',  # 同一次visit无法重复讨论一个topic
             'score': 0.2
         }
     }
@@ -295,6 +304,9 @@ def visits() -> DialogueFlow:
         'SET_SENTIMENT': MacroGPTJSON(
             'Among the three sentiments, negative, positive, and neutral, what is the speaker\'s sentiment?',
             {V.sentiment.name: ["positive"]}, V.sentiment.name, True),
+        'SET_FEEL': MacroGPTJSON(
+            'Is the speaker feeling better? Respond in yes or no',
+            {V.feel.name: ["yes"]}, V.feel.name, True),
         'JOKE': MacroJokes(),
         'CHAR_CHECK': MacroCharCheck(),
         'SET_BIG_FIVE': MacroGPTJSON(
@@ -414,6 +426,7 @@ class V(Enum):
     moveon_choice = 15
     same_bus = 16
     work = 17
+    feel = 18
 
 
 def gpt_completion(input: str, regex: Pattern = None) -> str:
