@@ -28,7 +28,7 @@ def visits() -> DialogueFlow:
         'state': 'start',
         "`Hi, I\'m Leanna, your personal start-up consultant. I had the pleasure to meet you at `#TIME` \n "
         "May I know your name please? Also, I won\'t be offended anytime if you want to take a break."
-        "Just type 'quit', we can pick up where we left off next time`": {
+        " Just type 'quit', we can pick up where we left off next time`": {
             '#SET_CALL_NAMES': {
                 '#USER_PROFILE': {
                     '#SET_SENTIMENT': {
@@ -332,7 +332,8 @@ def visits() -> DialogueFlow:
                 }
             },
             'error': {
-                '`sorry`': 'end'
+                '`Glad you feel good on this part. What topics do you want to discuss next? I can pick for '
+                'you if you need it`': 'big_small_cat'
             }
         }
     }
@@ -971,10 +972,11 @@ class MacroGPTJSON_BS(Macro):
         elif d['small_cat']:
             talked_sub.append(d['small_cat'])
 
+        asw_cat = []
         if 'user_responses' in vars[vars['call_names']]:
             asw_cat = vars[vars['call_names']]['user_responses'].keys()
 
-        if (asw_cat is not None) and (d['small_cat'] not in asw_cat):
+        if d['small_cat'] not in asw_cat:
             vars[vars['call_names']]['progress'] = vars[vars['call_names']].get('progress', 22) - 1
 
         vars['bus_true'] = "True"
