@@ -22,6 +22,7 @@ talked_sub = []
 
 # language: not natural. too blunt. no introduction. no quit. error state not handled
 # next step
+# branch out the returning business name
 
 def visits() -> DialogueFlow:
     transition_visit = {
@@ -53,8 +54,13 @@ def visits() -> DialogueFlow:
 
     transition_emobus = {
         'state': 'emobus',
+        '#IF($bus_true=False) `We didn\'t get to business conversation last time. So let\'t dive right in today\n`': {
+            'score': 0.7,
+            'state': 'business_start'
+        },
         '#IF($VISIT=multi) `Hi, we were discussing your `#GET_BUS_NAME`'
-        'Are you still working on the same business?`': {
+        'Are you still working on the same business idea?`': {
+            'score': 0.5,
             '#SAME_BUS': {
                 '#IF($same_bus=new) #DEL_PROFILE `Sorry to hear that, what makes you '
                 'decide to give up your old business idea?`': {
@@ -108,7 +114,7 @@ def visits() -> DialogueFlow:
             }
         },
         '`I had a great time with some of my other chatbot friends last week, trading stories, macros, '
-        'funny ChatGPT responses... My friends tell me I’m a really good listener! '
+        'funny ChatGPT responses... \nMy friends tell me I’m a really good listener! '
         'How would your friends describe you?`': {
             'score': 0.4,
             '#SET_BIG_FIVE': {
@@ -183,13 +189,16 @@ def visits() -> DialogueFlow:
                 'I have prepared questions and examples for 23 business concepts\nAfter going through them, '
                 '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`company. \n'
                 'At the end of the session, I will forward you to a business expert to evaluate your plan.\n'
-                'Is there a particular business problem you would like to brainstorm about first?`': {
+                'I can start you with `#GET_AVAIL_CATE` or what business concept you would like to '
+                'brainstorm about first?`': {
                     'state': 'big_small_cat',
                     '#SET_BIG_SAMLL_CATE': {
                         '` `': 'business_sub'
                     },
                     'error': {
-                        '`How about`#GET_AVAIL_CATE`. Does it sound like a topic you want to discuss?`': {
+                        '`Sorry, your request is out of the scope of Leanna. I can only help you with the basic '
+                        'business principles that every start-up shoudl consider such as `#GET_AVAIL_CATE`. '
+                        'Does it sound like a topic you want to discuss?`': {
                             '#SET_YES_NO_Topic': {
                                 '#IF($sounds_yesno=yes)` `': 'business_sub',
                                 '`No problem, what topic you want to start with? Topics related to'
@@ -540,9 +549,30 @@ class MacroTalkedSub(Macro):
         if vars[vars['call_names']].get('user_responses') is not None:
             prev_sub = list(vars[vars['call_names']].get('user_responses').keys())
 
+        talked_subsecs = talked_sub
+
+        all_subsecs = []  # List of all possible subsec values
+        subsec_to_section = {}  # Mapping of subsec values to their corresponding section
+
+        with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                subsec = row['subsec']
+                section = row['Section']
+                all_subsecs.append(subsec)
+                subsec_to_section[subsec] = section
+
+        available_subsecs = list(set(all_subsecs) - set(talked_subsecs))
+
+        if not available_subsecs:
+            return "Sorry, we have already covered all available subcategories."
+
+        chosen_subsec = random.choice(available_subsecs) if available_subsecs else None
+
         if prev_sub is None:
             return 'It was nice to meet you last time but we did not get to any of the business element during ' \
-                   'our last conversation. Is there a particular business area you would like to brainstorm about? '
+                   'our last conversation. I can start you with' + chosen_subsec + 'Or what business concept ' \
+                    'you would like to brainstorm about?'
 
         str = ''
         for i in range(len(prev_sub)):
@@ -559,6 +589,7 @@ class MacroUser(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         name = vars['call_names'].lower()
         vars['first_ex'] = True
+
         if name not in vars:
             vars['VISIT'] = 'first'
             vars[name] = {}
@@ -566,11 +597,19 @@ class MacroUser(Macro):
                                                               'I want to know how you are doing. ' \
                                                               'Do you mind sharing with me how your week has been?'
         else:
+            if 'bus_true' not in vars[vars['call_names']]:
+                vars[vars['call_names']]['bus_true'] = 'False'
+                vars['bus_true'] = vars[vars['call_names']]['bus_true']
+            else:
+                vars['bus_true'] = vars[vars['call_names']]['bus_true']
+
             vars['VISIT'] = 'multi'
             vars['more_jokes'] = 'false'
+
+            print(vars)
             if 'prev_adv' in vars[vars['call_names']]:
                 return 'Hi ' + vars['call_names'] + ', nice to see you again. ' \
-                                                    'Did you try the advice I gave you last time? How was it?'
+                        'Last time you seem really stressed. Did you try the advice I gave you last time? How was it?'
             else:
                 return 'Hi ' + vars['call_names'] + ', nice to see you again. How\'s your weekend?'
 
@@ -980,7 +1019,8 @@ class MacroGPTJSON_BS(Macro):
         if d['small_cat'] not in asw_cat:
             vars[vars['call_names']]['progress'] = vars[vars['call_names']].get('progress', 22) - 1
 
-        vars['bus_true'] = "True"
+        vars[vars['call_names']]['bus_true'] = 'True'
+        vars['bus_true'] = vars[vars['call_names']]['bus_true']
 
         if (not d['small_cat'] or d['small_cat'] == "N/A") and d['large_cat']:
             all_subsecs = [row['subsec'] for row in
