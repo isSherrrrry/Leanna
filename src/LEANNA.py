@@ -195,8 +195,8 @@ def visits() -> DialogueFlow:
                 'I have prepared questions and examples for 23 business concepts\nAfter going through them, '
                 '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`company. \n'
                 'At the end of the session, I will forward you to a business expert to evaluate your plan.\n'
-                'I can start you with `#GET_AVAIL_CATE` or what business concept you would like to '
-                'brainstorm about first?`': {
+                'What business concepts do you want to start with?'
+                'If you are not sure where to start, we can start with` #GET_AVAIL_CATE `. Is that ok for you?`': {
                     'state': 'big_small_cat',
                     '#SET_BIG_SAMLL_CATE': {
                         '` `': 'business_sub'
@@ -310,7 +310,7 @@ def visits() -> DialogueFlow:
                 'very much`': {
                     'score': 0.2,
                     '#MOVE_ON': {
-                        '#IF($moveon_choice=yes) `Sure. Let\'s move on to the next topic. What topics? '
+                        '#IF($moveon_choice=yes) `Sure. Let\'s move on to the next topic. Is there any particular topic you have in mind? '
                         'I can pick one if you don\'t have one in mind. Or, if you want time to think about it, '
                         'you can type \'quit\' to end our conversation and come back later.`': 'big_small_cat',
                         '` `': {
@@ -679,9 +679,9 @@ class MacroEmotion(Macro):
                 while vars[vars['call_names']]['prev_adv'] == adv:
                     adv = emo_dict[personality][random.randrange(3)]
             vars[vars['call_names']]['prev_adv'] = adv
-            return 'I have several other friends like you. ' + adv + '\n Also, relax, I know doing a start-up is ' \
+            return 'I have several other friends like you and I know this advice has helped them a lot. ' + adv + '\n Also, relax, I know doing a start-up is ' \
                         'stressful especially for college students like you. Do you feel like ' \
-                        'working on your business idea today? Or would you rather try my relaxation advice?'
+                        'working on your business idea today? Or would you like to relax and try my advice?'
         else:
             return
 
@@ -785,6 +785,8 @@ class MacroGetAvailCat(Macro):
         vars[vars['call_names']]['large_cat'] = chosen_large_cat
         vars[vars['call_names']]['large_cat_name'] = chosen_large_cat
 
+        talked_sub.append(chosen_subsec)
+
         return f"{chosen_subsec}? It is an important component of {chosen_large_cat}"
 
 
@@ -847,11 +849,6 @@ class MacroGPTJSON_BUS(Macro):
             return False
 
         if d is None:
-            return False
-
-        if not d['business_name'] or not d['industry']:
-            return False
-        elif d['business_name'] in ['N/A', 'Unknown', 'not', 'Not'] or d['industry'] in ['N/A', 'Unknown', 'not',                                                                          'Not']:
             return False
 
         if self.set_variables:
@@ -1043,9 +1040,7 @@ class MacroNLG(Macro):
 
 
 def get_bus_name(vars: Dict[str, Any]):
-    ls = None
-    if 'call_names' in vars:
-        ls = vars[vars['call_names']].get(V.business_name.name)
+    ls = vars[vars['call_names']].get(V.business_name.name)
     if ls is not None:
         return ls
     return "Your business"
