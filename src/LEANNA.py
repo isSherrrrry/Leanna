@@ -1042,7 +1042,9 @@ class MacroNLG(Macro):
 
 
 def get_bus_name(vars: Dict[str, Any]):
-    ls = vars[vars['call_names']].get(V.business_name.name)
+    ls = None
+    if 'call_names' in vars:
+        ls = vars[vars['call_names']].get(V.business_name.name)
     if ls is not None:
         return ls
     return "Your business"
