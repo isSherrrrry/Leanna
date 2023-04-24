@@ -18,7 +18,7 @@ openai.api_key_path = PATH_API_KEY
 
 told_jokes = []
 talked_sub = []
-
+asw_cat = []
 
 # language: not natural. too blunt. no introduction. no quit. error state not handled
 # next step
@@ -476,6 +476,9 @@ def gpt_completion(input: str, regex: Pattern = None) -> str:
 # THERE'S ERROR!
 class MacroGetProg(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        if vars[vars['call_names']]['small_cat'] not in asw_cat:
+            vars[vars['call_names']]['progress'] = vars[vars['call_names']].get('progress', 23) - 1
+
         prog = str(vars[vars['call_names']].get('progress'))
         if prog is not None:
             return prog
@@ -989,12 +992,8 @@ class MacroGPTJSON_BS(Macro):
         elif d['small_cat']:
             talked_sub.append(d['small_cat'])
 
-        asw_cat = []
         if 'user_responses' in vars[vars['call_names']]:
             asw_cat = vars[vars['call_names']]['user_responses'].keys()
-
-        if d['small_cat'] not in asw_cat:
-            vars[vars['call_names']]['progress'] = vars[vars['call_names']].get('progress', 23) - 1
 
         vars[vars['call_names']]['bus_true'] = 'True'
         vars['bus_true'] = vars[vars['call_names']]['bus_true']
