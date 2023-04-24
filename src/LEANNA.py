@@ -171,6 +171,13 @@ def visits() -> DialogueFlow:
         'quit': {
             'score': 1.5,
             'state': 'business_end'
+        },
+        '[{next topic, different topic}]': {
+            'score': 1.5,
+            '`Glad you feel confident on this part. What topics do you want to discuss next? '
+            'I can pick for you if you need it.`': {
+                'state': 'big_small_cat'
+            }
         }
     }
 
@@ -276,12 +283,14 @@ def visits() -> DialogueFlow:
     # 同一次visit无法重复讨论一个topic
     transition_positive = {
         'state': 'business_pos',
-        '#IF($all) `Thanks, I have recorded it to the our meeting notes. Congratulations, we have touched all critical '
+        '#IF($all) `Good idea, that sounds like a tangible plan to me. I have recorded it to the our meeting notes. '
+        'Congratulations, we have touched all critical '
         'business topics for a start up to succeed. Don\'t forget me if you become a business tycoon one day!` '
         '#UPDATE_BP': 'business_end',
-        '`Thanks, I have recorded it to the meeting notes. We have `#GET_PROG` topics to go. What do you want to '
-        'talk about next? Anything related to product innovation, customer relationships, and infrastructure management'
-        ' can be beneficial to` #GET_BUS_NAME`. I can recommend one for you as well` #UPDATE_BP': {
+        '`Good idea, that sounds like a tangible plan to me. I have recorded it to the meeting notes. '
+        'We have `#GET_PROG` topics to go. What do you want to talk about next? Anything related to product innovation,'
+        ' customer relationships, and infrastructure management can be beneficial to` #GET_BUS_NAME`. '
+        'I can recommend one for you as well` #UPDATE_BP': {
             'state': 'big_small_cat',
             'score': 0.2
         }
