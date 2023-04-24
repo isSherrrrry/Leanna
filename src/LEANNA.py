@@ -103,7 +103,7 @@ def visits() -> DialogueFlow:
         '#IF(#CHAR_CHECK) #EMO_ADV': {
             '#BUSINESS': {
                 '#IF($business=true) ` `': 'emobus',
-                '`OK please rest well. I\'m always here when you need me. '
+                '`No need to push it, please rest well. I\'m always here when you need me. '
                 'Come back when you are ready to talk about business. `': {
                     'state': 'end'
                 }
@@ -206,7 +206,7 @@ def visits() -> DialogueFlow:
                 'I have prepared questions and examples for 23 business concepts\nAfter going through them, '
                 '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`company. \n'
                 'And I will forward you to another business expert to evaluate your business plan at the end\n'
-                'Is there a particular business problem you would like to brainstorm about first?`': 'big_small_cat'
+                'Is there a particular business concept you would like to brainstorm about first?`': 'big_small_cat'
             }
         }
     }
@@ -770,6 +770,8 @@ class MacroGetAvailCat(Macro):
         vars[vars['call_names']]['small_cat'] = chosen_subsec
         vars[vars['call_names']]['large_cat'] = chosen_large_cat
         vars[vars['call_names']]['large_cat_name'] = chosen_large_cat
+
+        talked_sub.append(chosen_subsec)
 
         return f"{chosen_subsec}? It is an important component of {chosen_large_cat}"
 
