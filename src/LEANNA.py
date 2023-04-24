@@ -679,9 +679,10 @@ class MacroEmotion(Macro):
                 while vars[vars['call_names']]['prev_adv'] == adv:
                     adv = emo_dict[personality][random.randrange(3)]
             vars[vars['call_names']]['prev_adv'] = adv
-            return 'I have several other friends like you and I know this advice has helped them a lot. ' + adv + '\n Also, relax, I know doing a start-up is ' \
-                        'stressful especially for college students like you. Do you feel like ' \
-                        'working on your business idea today? Or would you like to relax and try my advice?'
+            return 'I have several other friends like you and I know this advice has helped them a lot. ' + adv + '\n ' \
+                        'Also, relax, I know doing a start-up is stressful especially for college students like you. ' \
+                        'Do you feel like working on your business idea today? Or would you like to relax ' \
+                        'and try my advice?'
         else:
             return
 
