@@ -408,7 +408,7 @@ def visits() -> DialogueFlow:
             set_yesno
         ),
         'SET_USER_KNOW': MacroGPTJSON_BUS_SETKNOW(
-            'Is the user\'s answer relavent to the question given? Provide binary answer, yes or no.'
+            'Is the user\'s answer relevant to the question given? Provide binary answer, yes or no.'
             'Please also provide the entire input as the next output. '
             'Phrase them into a json, with yes/no as the first element, and the input as the second;'
             'Only return the json file, please. thanks',
@@ -931,7 +931,7 @@ class MacroGPTJSON_BUS_SETKNOW(Macro):
         if d is None:
             return False
 
-        vars['user_know'] = d['user_know']
+        vars['user_know'] = d.get('user_know')
         vars['ans_bp'] = d.get('ans_bp')
 
         return True
