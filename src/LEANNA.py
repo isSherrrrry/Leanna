@@ -1004,6 +1004,8 @@ class MacroGPTJSON_BS(Macro):
         elif d['small_cat']:
             talked_sub.append(d['small_cat'])
 
+        print(talked_sub)
+
         if 'user_responses' in vars[vars['call_names']]:
             asw_cat = vars[vars['call_names']]['user_responses'].keys()
 
@@ -1027,6 +1029,7 @@ class MacroGPTJSON_BS(Macro):
                 chosen_subsec = random.choice(available_subsecs) if available_subsecs else None
 
             vars[vars['call_names']][V.small_cat.name] = chosen_subsec
+            talked_sub.append(chosen_subsec)
 
         return True
 
