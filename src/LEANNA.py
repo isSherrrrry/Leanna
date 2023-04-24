@@ -594,7 +594,6 @@ class MacroUser(Macro):
             vars['VISIT'] = 'multi'
             vars['more_jokes'] = 'false'
 
-            print(vars)
             if 'prev_adv' in vars[vars['call_names']]:
                 return 'Hi ' + vars['call_names'] + ', nice to see you again. ' \
                         'Last time you seem really stressed. Did you try the advice I gave you last time? How was it?'
@@ -604,8 +603,6 @@ class MacroUser(Macro):
 
 class MacroCharCheck(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        print(vars['call_names'])
-        print(vars[vars['call_names']])
         if 'big_five' in vars[vars['call_names']]:
             return True
         else:
@@ -839,7 +836,6 @@ class MacroGPTJSON_BUS(Macro):
         examples = f'{self.full_ex} or {self.empty_ex} if unavailable' if self.empty_ex else self.full_ex
         prompt = f'{self.request} Respond in the JSON schema such as {examples}: {ngrams.raw_text().strip()}'
         output = gpt_completion(prompt)
-        print(output)
         if not output: return False
 
         try:
@@ -872,7 +868,6 @@ class MacroGPTJSON_BUS_1(Macro):
         examples = f'{self.full_ex} or {self.empty_ex} if unavailable' if self.empty_ex else self.full_ex
         prompt = f'{self.request} Respond in the JSON schema such as {examples}: {ngrams.raw_text().strip()}'
         output = gpt_completion(prompt)
-        print(output)
         if not output: return False
 
         try:
@@ -916,7 +911,6 @@ class MacroGPTJSON_BUS_SETKNOW(Macro):
         try:
             d = json.loads(output)
         except JSONDecodeError:
-            print(f'Invalid: {output}')
             return False
 
         if d is None:
@@ -947,7 +941,6 @@ class MacroGPTJSON_BP(Macro):
         try:
             d = json.loads(output)
         except JSONDecodeError:
-            print(f'Invalid: {output}')
             return False
 
         if d is None:
