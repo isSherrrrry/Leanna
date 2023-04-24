@@ -1,4 +1,3 @@
-import csv
 import json
 import pickle
 import os.path
@@ -231,7 +230,7 @@ def visits() -> DialogueFlow:
                         'Let\'s try again. Would you like another quote?': 'more_quote'
                     }
                 },
-                '`It\'s ok if you cannot find any.\n` #GET_RESPONSE `Would you like another quote?`': 'more_quote'
+                '`Of course.\n` #GET_RESPONSE `Would you like another quote?`': 'more_quote'
             },
             'error': {
                 'Cool! Would you like another quote?': 'more_quote'
