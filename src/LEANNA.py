@@ -92,8 +92,7 @@ def visits() -> DialogueFlow:
         '`Glad to hear that. So`$call_names`, how far along have you gone with your business idea?`': {
             'score': 0.4,
             'error': {
-                '`You definitely have done some work to achieve that. '
-                'Let me help you further your entrepreneurial journey\n`': 'business_start'
+                '`Good to her that! Let me help you further your entrepreneurial journey\n`': 'business_start'
             }
         }
     }
@@ -213,7 +212,8 @@ def visits() -> DialogueFlow:
                 'I have prepared questions and examples for 23 business concepts\nAfter going through them, '
                 '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`company. \n'
                 'And I will forward you to another business expert to evaluate your business plan at the end\n'
-                'Is there a particular business concept you would like to brainstorm about first?`': 'big_small_cat'
+                'I can start you with `#GET_AVAIL_CATE` or what business concept you would like to '
+                'brainstorm about first?`': 'big_small_cat'
             }
         }
     }
@@ -287,8 +287,8 @@ def visits() -> DialogueFlow:
         'Congratulations, we have touched all critical '
         'business topics for a start up to succeed. Don\'t forget me if you become a business tycoon one day!` '
         '#UPDATE_BP': 'business_end',
-        '`Good idea, that sounds like a tangible plan to me. I have recorded it to the meeting notes. '
-        'We have `#GET_PROG` topics to go. What do you want to talk about next? Anything related to product innovation,'
+        '`Good idea, that sounds like a tangible plan to me. I have recorded it to the meeting notes.'
+        'We have `#GET_PROG` topics to go. \n What do you want to talk about next? Anything related to product innovation,'
         ' customer relationships, and infrastructure management can be beneficial to` #GET_BUS_NAME`. '
         'I can recommend one for you as well` #UPDATE_BP': {
             'state': 'big_small_cat',
@@ -303,7 +303,7 @@ def visits() -> DialogueFlow:
                     'state': 'business_neg',
                     'score': 0.2
                 },
-                '#IF($ex_choice=no) `Glad you feel better about this question. Do you want to try answering it again? '
+                '#IF($ex_choice=no) `Glad you feel better about this question. Let\'s try answering the question again? '
                 'We can also move on to the next topic if you don\'t think this business area matters to`#GET_BUS_NAME` '
                 'very much`': {
                     'score': 0.2,
@@ -722,6 +722,9 @@ class MacroGetQuestion(Macro):
                     question_text = row['Question']
                     break
         vars['SELECTED_QUESTION'] = question_text
+
+        talked_sub.append(small_cat)
+
         return question_text
 
 
@@ -780,8 +783,6 @@ class MacroGetAvailCat(Macro):
         vars[vars['call_names']]['large_cat'] = chosen_large_cat
         vars[vars['call_names']]['large_cat_name'] = chosen_large_cat
 
-        talked_sub.append(chosen_subsec)
-
         return f"{chosen_subsec}? It is an important component of {chosen_large_cat}"
 
 
@@ -819,7 +820,7 @@ class MacroGetExample(Macro):
                                    'Do you want another example?'
         else:
             return 'Here is an example that might align with your business\n' + selected_example + \
-                ' Do you need another example?'
+                ' Do you need another example to gain more inspiration?'
 
 
 class MacroGPTJSON_BUS(Macro):
@@ -844,6 +845,11 @@ class MacroGPTJSON_BUS(Macro):
             return False
 
         if d is None:
+            return False
+
+        if not d['business_name'] or not d['industry']:
+            return False
+        elif d['business_name'] in ['N/A', 'Unknown', 'not', 'Not'] or d['industry'] in ['N/A', 'Unknown', 'not',                                                                          'Not']:
             return False
 
         if self.set_variables:
