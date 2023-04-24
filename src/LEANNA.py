@@ -261,7 +261,7 @@ def visits() -> DialogueFlow:
                 '`Cool. Can you elaborate more on the plan please? `': 'set_user_know'
             }
         },
-        '`Let\'s talk about`#GET_SMALL_CAT`in` #GET_BIG_CAT `. When it comes to `#GET_SMALL_CAT`,'
+        '`Let\'s talk about`#GET_SMALL_CAT`in` #GET_BIG_CAT `. When it comes to`#GET_SMALL_CAT`,'
         'it is important to ask yourself\n` #GET_QUESTION': {
             'score': 0.4,
             'state': 'set_user_know',

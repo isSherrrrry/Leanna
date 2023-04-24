@@ -190,7 +190,7 @@ def visits() -> DialogueFlow:
                 'Can you think of any similar scenes in the movie?`': {
                     'score': 0.2,
                     '#SET_YESNO': {
-                        '#IF(#yesno=yes) `Wow, you are absolutely right. The power of the language definitely '
+                        '#IF($yesno=yes) `Wow, you are absolutely right. The power of the language definitely '
                         'plays a role in here. This conversation is interesting.\n'
                         'I happened to find some quotes '
                         'related to this movie.\n`': 'quote',
@@ -218,10 +218,10 @@ def visits() -> DialogueFlow:
         'state': 'quote',
         '#GET_QUOTE `What do you think of this quote?`': {
             '#QUOTE_ANS': {
-                '#IF(yesno=yes) `Yeah, I totally agree` #GET_RESPONSE `Would you like another quote?`': {
+                '#IF($yesno=yes) `Yeah, I totally agree` #GET_RESPONSE `Would you like another quote?`': {
                     'state': 'more_quote',
                     '#SET_YESNO': {
-                        '#IF(yesno=yes) `Sure, here is another one.\n`': 'quote',
+                        '#IF($yesno=yes) `Sure, here is another one.\n`': 'quote',
                         'Okay': {
                             'score': 0.1,
                             'state': 'depart'
