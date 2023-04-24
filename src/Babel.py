@@ -145,6 +145,7 @@ def visits() -> DialogueFlow:
     transition_quotes = {
         'state': 'quote',
         '#GET_QUOTE `Do you find any scenes in the movie that can relate to this quote?`': {
+            'state': 'quote_ans',
             '#QUOTE_ANS': {
                 '#IF(yesno=yes) `Yeah, I totally agree` #GET_RESPONSE `Would you like another quote?`': {
                     'state': 'more_quote',
@@ -154,9 +155,15 @@ def visits() -> DialogueFlow:
                             'score': 0.1,
                             'state': 'depart'
                         }
+                    },
+                    '`error`': {
+                        '`Sorry, I did not get that. Would you like another quote?`': 'more_quote'
                     }
                 },
                 '`It\'s ok if you cannot find any.\n` #GET_RESPONSE `Would you like another quote?`': 'more_quote'
+            },
+            'error': {
+                '`Sorry, could you elaborate on it?`': 'quote_ans'
             }
         }
     }
