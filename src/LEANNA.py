@@ -276,8 +276,8 @@ def visits() -> DialogueFlow:
     # 同一次visit无法重复讨论一个topic
     transition_positive = {
         'state': 'business_pos',
-        '#IF($all) `Thanks, I have recorded it to the our meeting notes. congratulations, we have touched all critical '
-        'business topics for a start up succeed. Don\'t forget me if you become a business tycoon one day` '
+        '#IF($all) `Thanks, I have recorded it to the our meeting notes. Congratulations, we have touched all critical '
+        'business topics for a start up to succeed. Don\'t forget me if you become a business tycoon one day!` '
         '#UPDATE_BP': 'business_end',
         '`Thanks, I have recorded it to the meeting notes. We have `#GET_PROG` topics to go. What do you want to '
         'talk about next? Anything related to product innovation, customer relationships, and infrastructure management'
@@ -300,7 +300,8 @@ def visits() -> DialogueFlow:
                     'score': 0.2,
                     '#MOVE_ON': {
                         '#IF($moveon_choice=yes) `Sure. Let\'s move on to the next topic. What topics? '
-                        'I can pick one if you don\'t have one in mind.`': 'big_small_cat',
+                        'I can pick one if you don\'t have one in mind. Or, if you want time to think about it, '
+                        'you can type \'quit\' to end our conversation and come back later.`': 'big_small_cat',
                         '` `': {
                             'score': 0.2,
                             'state': 'business_pos'
@@ -308,14 +309,16 @@ def visits() -> DialogueFlow:
                     }
                 },
                 '`Glad you feel confident on this part. What topics do you want to discuss next? I can pick for '
-                'you if you need it`': {
+                'you if you need it. Or, if you want time to think about it, you can type \'quit\' to end our '
+                'conversation and come back later.`': {
                     'state': 'big_small_cat',
                     'score': 0.1
                 }
             },
             'error': {
                 '`Glad you feel good on this part. What topics do you want to discuss next? I can pick for '
-                'you if you need it`': 'big_small_cat'
+                'you if you need it. Or, if you want time to think about it, you can type \'quit\' to end our '
+                'conversation and come back later.`': 'big_small_cat'
             }
         }
     }
