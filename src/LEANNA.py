@@ -120,7 +120,7 @@ def visits() -> DialogueFlow:
             '#SET_BIG_FIVE': {
                 '#EMO_ADV': {
                     '#BUSINESS': {
-                        '#IF($business=true) ` `': 'business_start',
+                        '#IF($business=true) ` `': 'emobus',
                         '`OK please rest well. I\'m always here when you need me. '
                         'Come back when you are ready to talk about business. `': {
                             'score': 0.1,
@@ -196,32 +196,7 @@ def visits() -> DialogueFlow:
                         '` `': 'business_sub'
                     },
                     'error': {
-                        '`Sorry, your request is out of the scope of Leanna. I can only help you with the basic '
-                        'business principles that every start-up shoudl consider such as `#GET_AVAIL_CATE`. '
-                        'Does it sound like a topic you want to discuss?`': {
-                            '#SET_YES_NO_Topic': {
-                                '#IF($sounds_yesno=yes)` `': 'business_sub',
-                                '`No problem, what topic you want to start with? Topics related to'
-                                ' product innovation, customer relationships, and infrastructure management are '
-                                'common important topics to a start-up `': {
-                                    'score': 0.4,
-                                    'state': 'big_small_cat'
-                                }
-                            },
-                            'error': {
-                                '`If you are not sure where to start, I recommend` #GET_AVAIL_CATE '
-                                '`Do you want to try it?`': {
-                                    '#SET_YES_NO_Topic': {
-                                        '#IF($sounds_yesno=yes)` `': 'business_sub',
-                                        '`I\'m not sure what topic you want to begin with. Let\'s go with my '
-                                        'recommendation, I promise you won\'t regret`': {
-                                            'score': 0.4,
-                                            'state': 'business_sub'
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        '` `': 'business_sub'
                     }
                 }
             },
@@ -281,7 +256,7 @@ def visits() -> DialogueFlow:
                 '`Cool. Can you elaborate more on the plan please? `': 'set_user_know'
             }
         },
-        '`Let\'s talk about`#GET_SMALL_CAT`. When it comes to `#GET_SMALL_CAT`,'
+        '`Let\'s talk about`#GET_SMALL_CAT`in` #GET_BIG_CAT `. When it comes to `#GET_SMALL_CAT`,'
         'it is important to ask yourself\n` #GET_QUESTION': {
             'score': 0.4,
             'state': 'set_user_know',
@@ -581,8 +556,8 @@ class MacroTalkedSub(Macro):
         last_topic = vars[vars['call_names']].get('small_cat')
 
         return 'Last time we talked about ' + str + 'And we left off with ' + last_topic + '. ' \
-                                                                                           'How is going with ' + last_topic + '? What topic you want to talk about today. We can revisit ' \
-                                                                                                                               'some of the topic we discussed last time if you have new ideas on them'
+                'How is going with ' + last_topic + '? What topic you want to talk about today. If you have new ideas ' \
+                'on topics we discussed last time, we can revisit them'
 
 
 class MacroUser(Macro):
@@ -831,7 +806,8 @@ class MacroGetExample(Macro):
                 selected_example + '\n If this example doesn\'t apply to your business, I can give you a different one.' \
                                    'Do you want to another example?'
         else:
-            return 'Here is another example that might align better with your business\n' + selected_example
+            return 'Here is an example that might align with your business\n' + selected_example + \
+                'Do you need another example?'
 
 
 class MacroGPTJSON_BUS(Macro):
@@ -1008,6 +984,8 @@ class MacroGPTJSON_BS(Macro):
         if not d['large_cat']:
             return False
 
+        vars['first_ex'] = True
+
         if d['small_cat'] in talked_sub:
             d['small_cat'] = None
         elif d['small_cat']:
@@ -1018,7 +996,7 @@ class MacroGPTJSON_BS(Macro):
             asw_cat = vars[vars['call_names']]['user_responses'].keys()
 
         if d['small_cat'] not in asw_cat:
-            vars[vars['call_names']]['progress'] = vars[vars['call_names']].get('progress', 22) - 1
+            vars[vars['call_names']]['progress'] = vars[vars['call_names']].get('progress', 23) - 1
 
         vars[vars['call_names']]['bus_true'] = 'True'
         vars['bus_true'] = vars[vars['call_names']]['bus_true']
