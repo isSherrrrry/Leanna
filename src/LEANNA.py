@@ -12,6 +12,7 @@ import time
 import re
 import openai
 import regexutils
+# commit
 
 PATH_API_KEY = '../resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
