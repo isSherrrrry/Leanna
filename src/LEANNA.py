@@ -35,7 +35,7 @@ def visits() -> DialogueFlow:
                     '#SET_SENTIMENT': {
                         '#IF($sentiment=positive) #DEL_ADV ` `': 'emobus',
                         '#IF($sentiment=neutral) #DEL_ADV ` `': 'joke',
-                        '#IF($sentiment=negative) ` `': 'personality',
+                        '#IF($sentiment=negative) ` I\'m sorry to hear that. `': 'personality',
                         '` `': {
                             'state': 'business_start',
                             'score': 0.1
@@ -47,7 +47,7 @@ def visits() -> DialogueFlow:
                 }
             },
             'error': {
-                '`Please don\'t trick me with your name??? Let\'s try this again`': 'start'
+                '`I\'m not sure I understood. Let\'s try this again`': 'start'
             }
         }
     }
@@ -62,7 +62,7 @@ def visits() -> DialogueFlow:
         'Are you still working on the same business idea?`': {
             'score': 0.5,
             '#SAME_BUS': {
-                '#IF($same_bus=new) #DEL_PROFILE `Sorry to hear that, what makes you '
+                '#IF($same_bus=new) #DEL_PROFILE `Sorry to hear that, what made you '
                 'decide to give up your old business idea?`': {
                     'error': {
                         '`What you have said is quite common for college entrepreneurs. Things happen but you guys'
@@ -113,9 +113,8 @@ def visits() -> DialogueFlow:
                 'Building a startup is a long process. Go and recharge today and we can talk later`': 'end'
             }
         },
-        '`I had a great time with some of my other chatbot friends last week, trading stories, macros, '
-        'funny ChatGPT responses... \nMy friends tell me I’m a really good listener! '
-        'How would your friends describe you?`': {
+        '`I want to get to know you better. Maybe I can give a suggestion that would help relieve some of your stress. '
+        'How would you describe your personality, or maybe your work style?`': {
             'score': 0.4,
             '#SET_BIG_FIVE': {
                 '#EMO_ADV': {
@@ -134,8 +133,7 @@ def visits() -> DialogueFlow:
                 }
             },
             'error': {
-                '`It\'s interesting to hear how your friends perceive you. It sounds like you have '
-                'strong relationships with those around and value their opinions\n`': 'business_start'
+                '`That\'s interesting to hear. \n`': 'business_start'
             }
         }
     }
@@ -178,13 +176,13 @@ def visits() -> DialogueFlow:
 
     transition_business = {
         'state': 'business_start',
-        '`I am so excited to talk to you about your business.'
+        '`I am so excited to talk to you about your business. '
         'What is its name? And what industry is your business in?`': {
             'score': 0.4,
             'state': 'bus_name_indu',
             '#SET_BUS_NAME': {
                 '`Thanks for letting me know! That sounds super exciting. \n'
-                'My role is to help you brainstorm by asking you critical business element for a start up \n'
+                'My role is to help you brainstorm by asking you critical business elements for a start up \n'
                 'so that you can have a tangible pitch by the end of our conversation. \n'
                 'I have prepared questions and examples for 23 business concepts\nAfter going through them, '
                 '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`company. \n'
@@ -201,7 +199,7 @@ def visits() -> DialogueFlow:
                 }
             },
             'error': {
-                '`It is OK if you haven\'t name your business yet. Take your time to think. We can brainstorm '
+                '`It is OK if you haven\'t named your business yet. Take your time to think. We can brainstorm '
                 'your business plan today without it\n'
                 'My role is to help you brainstorm by asking you critical business element for a start up \n'
                 'so that you can have a tangible pitch by the end of our conversation. \n'
@@ -217,7 +215,7 @@ def visits() -> DialogueFlow:
         'state': 'business_end',
         '#IF($bus_true=True) `Thank you so much for talking with me. This interaction has been fabulous. \n'
         'I got to know more about`#GET_BUS_NAME`and it was awesome! '
-        'I hope you have thought more aspects of your business by brainstorming with my questions.\n'
+        'I hope you have thought about more aspects of your business by brainstorming with my questions.\n'
         'Would you like a summary of what we talked about? `': {
             '#SET_YES_NO_S': {
                 '#IF($summary=yes) `Here\'s your summary \n `#GET_SUMMARY` '
@@ -283,7 +281,7 @@ def visits() -> DialogueFlow:
         '#UPDATE_BP': 'business_end',
         '`Thanks, I have recorded it to the meeting notes. We have `#GET_PROG` topics to go. What do you want to '
         'talk about next? Anything related to product innovation, customer relationships, and infrastructure management'
-        '? can be beneficial to` #GET_BUS_NAME`. I can recommend one for you as well` #UPDATE_BP': {
+        ' can be beneficial to` #GET_BUS_NAME`. I can recommend one for you as well` #UPDATE_BP': {
             'state': 'big_small_cat',
             'score': 0.2
         }
@@ -296,13 +294,13 @@ def visits() -> DialogueFlow:
                     'state': 'business_neg',
                     'score': 0.2
                 },
-                '#IF($ex_choice=no) `Glad you feel better about this question. Do you want to try again answering it? '
-                'we can also move on to the next topic if you don\'t think this business area matter to`#GET_BUS_NAME` '
+                '#IF($ex_choice=no) `Glad you feel better about this question. Do you want to try answering it again? '
+                'We can also move on to the next topic if you don\'t think this business area matters to`#GET_BUS_NAME` '
                 'very much`': {
                     'score': 0.2,
                     '#MOVE_ON': {
                         '#IF($moveon_choice=yes) `Sure. Let\'s move on to the next topic. What topics? '
-                        'I can pick for you too`': 'big_small_cat',
+                        'I can pick one if you don\'t have one in mind.`': 'big_small_cat',
                         '` `': {
                             'score': 0.2,
                             'state': 'business_pos'
@@ -667,9 +665,9 @@ class MacroEmotion(Macro):
                 while vars[vars['call_names']]['prev_adv'] == adv:
                     adv = emo_dict[personality][random.randrange(3)]
             vars[vars['call_names']]['prev_adv'] = adv
-            return 'I have several other friends like you' + adv + '\n Also, relax, I know doing a start-up is ' \
+            return 'I have several other friends like you. ' + adv + '\n Also, relax, I know doing a start-up is ' \
                         'stressful especially for college students like you. Do you feel like ' \
-                        'working on your business idea today? Or you rather try my relaxation advice?'
+                        'working on your business idea today? Or would you rather try my relaxation advice?'
         else:
             return
 
@@ -793,7 +791,7 @@ class MacroGetExample(Macro):
         remaining_examples = [example for example in available_examples if example not in used_examples]
 
         if len(remaining_examples) == 0:
-            return "Sorry, I can't think of more examples on top of my head. We can comeback to this later"
+            return "Sorry, I can't think of more examples off the top of my head. We can come back to this later"
 
         selected_example = remaining_examples[0]  # Select the first remaining example
         used_examples.append(selected_example)
@@ -803,11 +801,11 @@ class MacroGetExample(Macro):
             vars['first_ex'] = False
             return 'Let me scaffold you to this question. Here is an ' + vars[vars['call_names']]['small_cat'] \
                 + ' example that might help you understand and brainstorm\n' + \
-                selected_example + '\n If this example doesn\'t apply to your business, I can give you a different one.' \
-                                   'Do you want to another example?'
+                selected_example + '\n If this example doesn\'t apply to your business, I can give you a different one. ' \
+                                   'Do you want another example?'
         else:
             return 'Here is an example that might align with your business\n' + selected_example + \
-                'Do you need another example?'
+                ' Do you need another example?'
 
 
 class MacroGPTJSON_BUS(Macro):
