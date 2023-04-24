@@ -36,6 +36,11 @@ def visits() -> DialogueFlow:
                             'score': 0.1,
                             'state': 'babel_start'
                         }
+                    },
+                    'error': {
+                        '`Okay, I am actually a big fan of movies. \n'
+                        'I just watched a movie called Babel and like it very'
+                        ' much!\n`': 'babel_start'
                     }
                 }
             },
@@ -49,6 +54,17 @@ def visits() -> DialogueFlow:
         'quit': {
             'score': 1.5,
             'state': 'depart'
+        },
+        'movie summary': {
+            'score': 1.5,
+            '`Babel is a 2006 drama film directed by Alejandro González Iñárritu.\n'
+            'The movie is told through multiple interweaving storylines, set in Morocco, Japan, and the United States.\n'
+            'The film explores themes of miscommunication, cultural differences, and the consequences of actions.\n'
+            'The different characters are connected by a tragic incident, and their individual stories gradually unfold,\n'
+            'revealing the complexities and intricacies of human relationships.\n'
+            'The movie received critical acclaim and was nominated for multiple awards, '
+            'including seven Academy Awards, winning for Best Original Score.\n'
+            'Let\'s move on to the background story. Do you know the story of Babel Tower?`': 'babel_tower'
         }
     }
 
@@ -57,11 +73,30 @@ def visits() -> DialogueFlow:
         '`I know you have watched the movie before too. \n'
         'I like the movie very much, '
         'especially the background story of Babel Tower.\n'
-        'Do you know the story of Babel Tower?`': {
+        'Do you know the story of Babel Tower?\n'
+        'Oh, if you would like a summary of the movie to refresh your memory, type movie summary to me directly<:`': {
+            'state': 'babel_tower',
             '#SET_YESNO': {
                 '#IF($yesno=yes) `I\'m glad you know it too. \n'
                 'I like the concept of translating up and down too.`': 'updown',
                 '`Here\'s the story of Babel Tower: \n'
+                'The story of the Babel tower stems from the bible in the book of Genesis. \n'
+                'At the beginning, humanity all spoke one language and because of their ease of communication,\n'
+                'they decided to work together to build a tower that reaches to the heavens in order to '
+                'make a name for themselves and avoid being scattered across the earth. \n'
+                'God saw such work as defiance and is not pleased. \n'
+                'God decides to revoke their universal language by causing them to speak different tongues '
+                'so they cannot understand each other. \n'
+                'This then leads to humanity being dispersed across the world in different nations.\n'
+                'How do you feel about it?`': {
+                    'score': 0.1,
+                    'error': {
+                        'Sure. I also like the concept of translating up and down too.': 'updown'
+                    }
+                }
+            },
+            'error': {
+                '`Sure. Let me show you the story of Babel Tower: \n'
                 'The story of the Babel tower stems from the bible in the book of Genesis. \n'
                 'At the beginning, humanity all spoke one language and because of their ease of communication,\n'
                 'they decided to work together to build a tower that reaches to the heavens in order to '
@@ -85,7 +120,7 @@ def visits() -> DialogueFlow:
         '`You know, in translation, there is a concept called "translating up/down". \n'
         'Translating up is from less'
         ' powerful language to more powerful language.\n'
-        ' Translating down is the other way around.\nIt is taking a sophisticated language in terms of language complexity '
+        'Translating down is the other way around.\nIt is taking a sophisticated language in terms of language complexity '
         'and technicality and simplifying it,\n'
         'missing the key hints of other meanings to become a literal translation.\n'
         'Do you notice any '
@@ -101,9 +136,10 @@ def visits() -> DialogueFlow:
                 'it is also a word rooted in negative meaning and in a way, racism. \n'
                 'However, when a Mexican interprets it, only the central meaning is kept without '
                 'the complexity of connections to a negative word and also racism. \n'
-                'Therefore, a \"weird\" interaction occurs between the American child who is quite serious in his statement '
+                'Therefore, a "weird" interaction occurs between the American child who is quite serious in his statement '
                 'and the Mexican relative who is quite comical in his response.\n'
                 'I also know a bunch of good quotes in the movie!\n`': 'quote',
+
                 '`Let me give you an example. \n'
                 'It is a conversation between Nathan Gamble and Gael Garcia Bernal.'
                 'Nathan said that \"My mom said Mexico is dangerous.\" and Gael said  \"Yes, it\'s full of Mexicans.\"\n'
@@ -114,14 +150,50 @@ def visits() -> DialogueFlow:
                 'it is also a word rooted in negative meaning and in a way, racism. \n'
                 'However, when a Mexican interprets it, only the central meaning is kept without '
                 'the complexity of connections to a negative word and also racism. \n'
-                'Therefore, a \“weird\” interaction occurs between the American child who is quite serious in his statement '
+                'Therefore, a "weird" interaction occurs between the American child who is quite serious in his statement '
+                'and the Mexican relative who is quite comical in his response.\n'
+                'Can you think of any similar scenes in the movie?`': {
+                    'score': 0.2,
+                    '#SET_YESNO': {
+                        '#IF($yesno=yes) `Wow, you are absolutely right. The power of the language definitely '
+                        'plays a role in here. This conversation is interesting. I happened to find some quotes '
+                        'related to this movie.`': 'quote',
+                        '`It’s ok, I have some interesting quotes related to the movie that you might find '
+                        'interesting. I want to know how you think about them.\n`': {
+                            'score': 0.2,
+                            'state': 'quote'
+                        }
+                    },
+                    'error': {
+                        '`It’s ok, I have some interesting quotes related to the movie that you might find '
+                        'interesting. I want to know how you think about them.\n`': {
+                            'state': 'quote'
+                        }
+                    }
+
+                }
+
+            },
+            'error': {
+                '`Let me give you an example. \n'
+                'It is a conversation between Nathan Gamble and Gael Garcia Bernal.'
+                'Nathan said that \"My mom said Mexico is dangerous.\" and Gael said  \"Yes, it\'s full of Mexicans.\"\n'
+                'This is an example of translating down because with Nathan’s quote, '
+                'he is saying something that reflects American viewpoints of Mexico. \n'
+                'Danger holds many meanings in English, not only is it a word that '
+                'describes the potential of not being safe, \n'
+                'it is also a word rooted in negative meaning and in a way, racism. \n'
+                'However, when a Mexican interprets it, only the central meaning is kept without '
+                'the complexity of connections to a negative word and also racism. \n'
+                'Therefore, a "weird" interaction occurs between the American child who is quite serious in his statement '
                 'and the Mexican relative who is quite comical in his response.\n'
                 'Can you think of any similar scenes in the movie?`': {
                     'score': 0.2,
                     '#SET_YESNO': {
                         '#IF(#yesno=yes) `Wow, you are absolutely right. The power of the language definitely '
-                        'plays a role in here. This conversation is interesting. I happened to find some quotes '
-                        'related to this movie.`': 'quote',
+                        'plays a role in here. This conversation is interesting.\n'
+                        'I happened to find some quotes '
+                        'related to this movie.\n`': 'quote',
                         '`It’s ok, I have some interesting quotes related to the movie that you might find '
                         'interesting. I want to know how you think about them.`': {
                             'score': 0.2,
@@ -144,8 +216,7 @@ def visits() -> DialogueFlow:
 
     transition_quotes = {
         'state': 'quote',
-        '#GET_QUOTE `Do you find any scenes in the movie that can relate to this quote?`': {
-            'state': 'quote_ans',
+        '#GET_QUOTE `What do you think of this quote?`': {
             '#QUOTE_ANS': {
                 '#IF(yesno=yes) `Yeah, I totally agree` #GET_RESPONSE `Would you like another quote?`': {
                     'state': 'more_quote',
@@ -156,14 +227,14 @@ def visits() -> DialogueFlow:
                             'state': 'depart'
                         }
                     },
-                    '`error`': {
-                        '`Sorry, I did not get that. Would you like another quote?`': 'more_quote'
+                    'error': {
+                        'Let\'s try again. Would you like another quote?': 'more_quote'
                     }
                 },
                 '`It\'s ok if you cannot find any.\n` #GET_RESPONSE `Would you like another quote?`': 'more_quote'
             },
             'error': {
-                '`Sorry, could you elaborate on it?`': 'quote_ans'
+                'Cool! Would you like another quote?': 'more_quote'
             }
         }
     }
