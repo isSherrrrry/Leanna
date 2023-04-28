@@ -208,7 +208,7 @@ def visits() -> DialogueFlow:
                         '` `': 'business_sub'
                     },
                     'error': {
-                        '` `': 'business_sub'
+                        '#SET($bus_true=True)` `': 'business_sub'
                     }
                 }
             },
@@ -233,7 +233,12 @@ def visits() -> DialogueFlow:
         'I hope you have thought about more aspects of your business by brainstorming with my questions.\n'
         'Would you like a summary of what we talked about? `': {
             '#SET_YES_NO_S': {
-                '#IF($summary=yes) `Here\'s your summary \n `#GET_SUMMARY` '
+                '#IF($summary=yes) `Here\'s your summary \n `#GET_SUMMARY` \n'
+                'It is time for us to part and time for you to meet with Ben, who is the Innovation Programming and '
+                'Operations Manager of The Hatchery, Emory University\'s Center for Innovation.\nBen\'s passion and '
+                'experiences have centered on the creation and sustainability of nonprofits and social enterprises. \n'
+                'Click into this link so that your business can take another step forwards: \n'
+                'https://calendly.com/benhatchery/officehours?month=2023-04 \n'
                 'Thank you! and It\'s very nice to meet you`$call_names': 'end',
                 '`Alright. Thanks for using Leanna! Please come back when you have more ideas. '
                 'We can pick up where we have left`': {
