@@ -13,6 +13,7 @@ import re
 import openai
 import regexutils
 # commit
+# example problem
 
 PATH_API_KEY = '../resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
@@ -81,12 +82,16 @@ def visits() -> DialogueFlow:
             },
             'error': {
                 '`I actually think` #GET_BUS_NAME is quite interesting. Do you want to keep working on it?': {
+                    'state': 'set_yes_no_b',
                     '#SET_YES_NO_B': {
                         '#IF($prev_bus=yes)': {
                             'state': 'business_part'
                         },
                         '#DEL_PROFILE `Sorry to hear that, but I will help you do this all over again.\n'
                         'What is the name of your new business and what industry is it in?`': 'bus_name_indu'
+                    },
+                    'error': {
+                        '`Sorry I didn\'t catch that. Do you want to keep working on `#GET_BUS_NAME?` today?`': 'set_yes_no_b'
                     }
                 }
 
@@ -318,6 +323,11 @@ def visits() -> DialogueFlow:
                             'score': 0.2,
                             'state': 'business_pos'
                         }
+                    },
+                    'error': {
+                        '`Let\'s move on to the next topic. Is there any particular topic you have in mind? '
+                        'I can pick one if you don\'t have one in mind. Or, if you want time to think about it, '
+                        'you can type \'quit\' to end our conversation and come back later.`': 'big_small_cat'
                     }
                 },
                 '`Glad you feel confident on this part. What topics do you want to discuss next? I can pick for '
@@ -1006,7 +1016,6 @@ class MacroGPTJSON_BS(Macro):
         elif d['small_cat']:
             talked_sub.append(d['small_cat'])
 
-        print(talked_sub)
 
         if 'user_responses' in vars[vars['call_names']]:
             asw_cat = vars[vars['call_names']]['user_responses'].keys()
