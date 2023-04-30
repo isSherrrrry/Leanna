@@ -12,8 +12,6 @@ import time
 import re
 import openai
 import regexutils
-# commit
-# example problem
 
 PATH_API_KEY = '../resources/openai_api.txt'
 openai.api_key_path = PATH_API_KEY
@@ -21,12 +19,6 @@ openai.api_key_path = PATH_API_KEY
 told_jokes = []
 talked_sub = []
 asw_cat = []
-
-# language: not natural. too blunt. no introduction. no quit. error state not handled
-# next step
-# branch out the returning business name
-
-# comment
 
 def visits() -> DialogueFlow:
     transition_visit = {
@@ -58,7 +50,8 @@ def visits() -> DialogueFlow:
 
     transition_emobus = {
         'state': 'emobus',
-        '#IF($bus_true=False) `We didn\'t get to business conversation last time. So let\'t dive right in today\n`': {
+        '#IF($bus_true=False) `We didn\'t get to business conversation last time. '
+        'So let\'s dive right in today\n`': {
             'score': 0.7,
             'state': 'business_start'
         },
@@ -81,7 +74,7 @@ def visits() -> DialogueFlow:
                 }
             },
             'error': {
-                '`I actually think` #GET_BUS_NAME is quite interesting. Do you want to keep working on it?': {
+                '`I actually think` #GET_BUS_NAME is quite interesting. Do you want to keep working on it?`': {
                     'state': 'set_yes_no_b',
                     '#SET_YES_NO_B': {
                         '#IF($prev_bus=yes)': {
@@ -195,20 +188,20 @@ def visits() -> DialogueFlow:
             'score': 0.4,
             'state': 'bus_name_indu',
             '#SET_BUS_NAME': {
-                '`Thanks for letting me know! That sounds super exciting. \n'
-                'My role is to help you brainstorm by asking you critical business elements for a start up \n'
+                '`Thanks for letting me know! That sounds super exciting. \n '
+                'My role is to help you brainstorm by asking you critical business concepts for a start up \n'
                 'so that you can have a tangible pitch by the end of our conversation. \n'
-                'I have prepared questions and examples for 23 business concepts\nAfter going through them, '
+                'I have prepared questions and examples for 23 business concepts\n After going through them, '
                 '`#GET_BUS_NAME`is sure to change the world one day as a fantastic`#GET_INDU`company. \n'
                 'At the end of the session, I will forward you to a business expert to evaluate your plan.\n'
-                'What business concepts do you want to start with?'
-                'If you are not sure where to start, we can start with` #GET_AVAIL_CATE `. Is that ok for you?`': {
+                'What business concepts do you want to start with? If you are not sure where to start, '
+                'we can start with` #GET_AVAIL_CATE': {
                     'state': 'big_small_cat',
                     '#SET_BIG_SAMLL_CATE': {
                         '` `': 'business_sub'
                     },
                     'error': {
-                        '#SET($bus_true=True)` `': 'business_sub'
+                        '#SET($bus_true=True) ` `': 'business_sub'
                     }
                 }
             },
@@ -234,7 +227,7 @@ def visits() -> DialogueFlow:
         'Would you like a summary of what we talked about? `': {
             '#SET_YES_NO_S': {
                 '#IF($summary=yes) `Here\'s your summary \n `#GET_SUMMARY` \n'
-                'It is time for us to part and time for you to meet with Ben, who is the Innovation Programming and '
+                '\nIt is time for us to part and time for you to meet with Ben, who is the Innovation Programming and '
                 'Operations Manager of The Hatchery, Emory University\'s Center for Innovation.\nBen\'s passion and '
                 'experiences have centered on the creation and sustainability of nonprofits and social enterprises. \n'
                 'Click into this link so that your business can take another step forwards: \n'
@@ -322,8 +315,7 @@ def visits() -> DialogueFlow:
                     'score': 0.2,
                     '#MOVE_ON': {
                         '#IF($moveon_choice=yes) `Sure. Let\'s move on to the next topic. Is there any particular topic you have in mind? '
-                        'I can pick one if you don\'t have one in mind. Or, if you want time to think about it, '
-                        'you can type \'quit\' to end our conversation and come back later.`': 'big_small_cat',
+                        'I can pick one if you don\'t have one in mind.`': 'big_small_cat',
                         '` `': {
                             'score': 0.2,
                             'state': 'business_pos'
@@ -331,21 +323,18 @@ def visits() -> DialogueFlow:
                     },
                     'error': {
                         '`Let\'s move on to the next topic. Is there any particular topic you have in mind? '
-                        'I can pick one if you don\'t have one in mind. Or, if you want time to think about it, '
-                        'you can type \'quit\' to end our conversation and come back later.`': 'big_small_cat'
+                        'I can pick one if you don\'t have one in mind.`': 'big_small_cat'
                     }
                 },
                 '`Glad you feel confident on this part. What topics do you want to discuss next? I can pick for '
-                'you if you need it. Or, if you want time to think about it, you can type \'quit\' to end our '
-                'conversation and come back later.`': {
+                'you if you need it.`': {
                     'state': 'big_small_cat',
                     'score': 0.1
                 }
             },
             'error': {
                 '`Glad you feel good on this part. What topics do you want to discuss next? I can pick for '
-                'you if you need it. Or, if you want time to think about it, you can type \'quit\' to end our '
-                'conversation and come back later.`': 'big_small_cat'
+                'you if you need it. `': 'big_small_cat'
             }
         }
     }
@@ -389,9 +378,8 @@ def visits() -> DialogueFlow:
         'SET_BIG_SAMLL_CATE': MacroGPTJSON_BS(
             'Please classify the input sentence into the following three large categories '
             'and the corresponding small category within each large category. If small catgeory does not exist, leave it blank: '
-            'product innovation (includes customer needs, customer fears, customer wants, '
-            'product benefits, product features, product experiences, and value proposition), '
-            'customer relationship (includes before purchase, during purchase, after purchase, '
+            'product innovation (includes customer needs, product benefits, product features, product experiences, '
+            'and value proposition), customer relationship (includes before purchase, during purchase, after purchase, '
             'intellectual strategy, value chain strategy, architectural strategy, disruption strategy, '
             'trust strengths, and values loyalty) , and infrastructure management (team skills, team culture, '
             'operations, inbound logistics, outbound logistics, and resource gathering).  '
@@ -428,8 +416,7 @@ def visits() -> DialogueFlow:
             'Does the user want to work on his business plan today. Categorize the input sentence as either yes or no',
             {V.work.name: ["yes"]}, V.work.name, True),
         'SET_IDEA_EX': MacroGPTJSON(
-            'Does the users want another example? either because the current example does not apply to their business '
-            'or they directly request another one. Categorize the input sentence as either yes or no',
+            'Does the users want another example? Categorize the input sentence as either yes or no',
             {V.ex_choice.name: ["yes"]}, V.ex_choice.name, True),
         'SAME_BUS': MacroGPTJSON(
             'Does the user still work on the same business as before? '
@@ -540,7 +527,7 @@ class MacroCheckTalk(Macro):
             if small_cat in prev_sub:
                 prev_plan = vars[vars['call_names']]['user_responses'].get(small_cat)
                 str = 'I asked you about \n' + question_text + '\n and your ' \
-                                                               'previous plan was \n' + prev_plan + '. ' + '\n What do you think about it now?'
+                                                               'previous plan was \n' + prev_plan + '. ' + '\n What do you think about this question now?'
                 return str
             else:
                 str = 'let\'s think about this question: \n' + question_text
@@ -587,7 +574,7 @@ class MacroTalkedSub(Macro):
         last_topic = vars[vars['call_names']].get('small_cat')
 
         return 'Last time we talked about ' + str + 'And we left off with ' + last_topic + '. ' \
-                'How is going with ' + last_topic + '? What topic you want to talk about today. If you have new ideas ' \
+                'How is going with it? \n What topic you want to talk about today. If you have new ideas ' \
                 'on topics we discussed last time, we can revisit them'
 
 
@@ -775,7 +762,6 @@ class MacroUpdateResponses(Macro):
 
 class MacroGetAvailCat(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        talked_subsecs = talked_sub
 
         all_subsecs = []  # List of all possible subsec values
         subsec_to_section = {}  # Mapping of subsec values to their corresponding section
@@ -788,7 +774,7 @@ class MacroGetAvailCat(Macro):
                 all_subsecs.append(subsec)
                 subsec_to_section[subsec] = section
 
-        available_subsecs = list(set(all_subsecs) - set(talked_subsecs))
+        available_subsecs = list(set(all_subsecs) - set(talked_sub))
 
         if not available_subsecs:
             return "Sorry, we have already covered all available subcategories."
@@ -801,8 +787,6 @@ class MacroGetAvailCat(Macro):
         vars[vars['call_names']]['small_cat'] = chosen_subsec
         vars[vars['call_names']]['large_cat'] = chosen_large_cat
         vars[vars['call_names']]['large_cat_name'] = chosen_large_cat
-
-        talked_sub.append(chosen_subsec)
 
         return f"{chosen_subsec}? It is an important component of {chosen_large_cat}"
 
@@ -841,7 +825,7 @@ class MacroGetExample(Macro):
                                    'Do you want another example?'
         else:
             return 'Here is an example that might align with your business\n' + selected_example + \
-                ' Do you need another example to gain more inspiration?'
+                '\n Do you need another example to gain more inspiration?'
 
 
 class MacroGPTJSON_BUS(Macro):
@@ -1004,6 +988,30 @@ class MacroGPTJSON_BS(Macro):
             return False
 
         if d is None:
+            all_subsecs = []  # List of all possible subsec values
+            subsec_to_section = {}  # Mapping of subsec values to their corresponding section
+
+            with open('../resources/data.csv', newline='', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    subsec = row['subsec']
+                    section = row['Section']
+                    all_subsecs.append(subsec)
+                    subsec_to_section[subsec] = section
+
+            available_subsecs = list(set(all_subsecs) - set(talked_sub))
+
+            if not available_subsecs:
+                return "Sorry, we have already covered all available subcategories."
+
+            chosen_subsec = random.choice(available_subsecs) if available_subsecs else None
+            if chosen_subsec is None:
+                return "Unfortunately, there are no more subcategories to discuss."
+
+            chosen_large_cat = subsec_to_section[chosen_subsec]
+            vars[vars['call_names']]['small_cat'] = chosen_subsec
+            vars[vars['call_names']]['large_cat'] = chosen_large_cat
+            vars[vars['call_names']]['large_cat_name'] = chosen_large_cat
             return False
 
         if self.set_variables:
